@@ -1,0 +1,311 @@
+---
+title: "Analiza TDA: Wykrywanie anomalii w szeregach czasowych"
+author: "M. Janiga"
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: false
+    theme: cosmo
+jupyter: python3
+---
+
+# Wprowadzenie do Analizy Topologicznej Danych (TDA)
+
+Analiza Topologiczna Danych (TDA) pozwala nam spojrzeć na szeregi czasowe nie jako na zwykłe wykresy, ale jako na kształty geometryczne "zanurzone" w przestrzeni wielowymiarowej. Głównym celem tej analizy jest sprawdzenie, czy narzędzia topologiczne (takie jak homologia persystentna) potrafią skutecznie odróżnić sygnał uporządkowany od chaosu oraz czy mogą służyć jako system wczesnego ostrzegania przed awariami.
+
+## Kluczowe pojęcia
+
+1.  **Zanurzenie (Takens Embedding)**: Przekształcamy jednowymiarowy sygnał w chmurę punktów w przestrzeni wielowymiarowej (np. 3D).
+2.  **Filtracja (Vietoris-Rips)**: Budujemy struktury geometryczne wokół punktów, zwiększając promień "kulek" wokół nich.
+3.  **Diagram Persystencji**: Rejestrujemy momenty narodzin i śmierci cech topologicznych (np. pętli). Cechy "długowieczne" to istotny sygnał, "krótkowieczne" to szum.
+4.  **Entropia Persystentna**: Jedna liczba podsumowująca stopień skomplikowania (chaosu) w strukturze topologicznej danych.
+
+# Ustawienia wstępne
+
+Wczytujemy niezbędne biblioteki oraz konfigurujemy ujednolicony styl i wymiary wizualizacji.
+
+```{python}
+import sys
+import os
+import numpy as np
+import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import plotly.io as pio
+import seaborn as sns
+from gtda.time_series import TakensEmbedding
+from gtda.homology import VietorisRipsPersistence
+from gtda.diagrams import PersistenceEntropy
+from gtda.plotting import plot_diagram
+from sklearn.pipeline import Pipeline
+
+# --- Konfiguracja wizualizacji ---
+# Definicja standardowych wymiarów
+FIG_WIDTH = 8
+FIG_HEIGHT = 4
+PLOTLY_HEIGHT = 500
+
+# Ujednolicony styl Matplotlib/Seaborn
+sns.set_theme(style="whitegrid")
+plt.rcParams.update({
+    'figure.figsize': (FIG_WIDTH, FIG_HEIGHT),
+    'axes.titlesize': 14,
+    'axes.labelsize': 12,
+    'xtick.labelsize': 10,
+    'ytick.labelsize': 10,
+    'lines.linewidth': 1.5,
+    'legend.fontsize': 11,
+    'figure.dpi': 100
+})
+
+# Stałe kolorystyczne (Semantyczne)
+COLOR_HEALTHY = "#1f77b4"  # Niebieski
+COLOR_ANOMALY = "#d62728"  # Czerwony
+COLOR_MIXED   = "#9467bd"  # Fioletowy
+
+# Ujednolicony styl Plotly
+pio.templates.default = "plotly_white"
+
+print(f"Python executable: {sys.executable}")
+```
+
+# Porównanie bazowe: Porządek vs. Chaos
+
+Zaczynamy od wygenerowania dwóch skrajnych sygnałów: idealnej sinusoidy (reprezentującej zdrowy, cykliczny proces) oraz całkowicie losowego szumu (reprezentującego awarię lub chaos).
+
+```{python}
+#| label: fig-signals
+#| fig-cap: "Porównanie zdrowego sygnału (cykl) i awarii (chaos)"
+
+t = np.linspace(0, 10, 500)
+periodic_signal = np.sin(t).reshape(1, -1)
+random_signal = np.random.rand(500).reshape(1, -1)
+
+plt.figure()
+plt.plot(t, periodic_signal[0], label="Zdrowe zachowanie (Cykl)", color=COLOR_HEALTHY)
+plt.plot(t, random_signal[0], label="Awaria (Chaos)", color=COLOR_ANOMALY, alpha=0.6)
+plt.title("Porównanie sygnałów w dziedzinie czasu")
+plt.xlabel("Czas")
+plt.ylabel("Amplituda")
+plt.legend(loc="upper right")
+plt.show()
+```
+
+# Geometria danych (Takens Embedding)
+
+Aby zastosować TDA, musimy zamienić wykres 2D w chmurę punktów w 3D. Wykorzystujemy do tego twierdzenie Takensa. Parametry `time_delay` (przesunięcie) oraz `dimension` (liczba wymiarów) zostały tutaj dobrane eksperymentalnie tak, aby uzyskać czytelną strukturę geometryczną.
+
+```{python}
+#| label: fig-3d-embedding
+#| fig-cap: "Zanurzenie 3D (Takens Embedding) sinusoidy - idealna pętla"
+
+TE = TakensEmbedding(time_delay=10, dimension=3)
+periodic_3d = TE.fit_transform(periodic_signal)
+random_3d = TE.fit_transform(random_signal)
+
+# Wizualizacja 3D dla sinusoidy
+fig = go.Figure(data=[go.Scatter3d(
+    x=periodic_3d[0,:,0],
+    y=periodic_3d[0,:,1],
+    z=periodic_3d[0,:,2],
+    mode='markers',
+    marker=dict(size=3, color=COLOR_HEALTHY, opacity=0.8)
+)])
+fig.update_layout(
+    title="Chmura punktów w 3D (Sygnał periodyczny)",
+    height=PLOTLY_HEIGHT,
+    margin=dict(l=0, r=0, b=0, t=60),
+    scene=dict(xaxis_title='X', yaxis_title='Y', zaxis_title='Z')
+)
+fig.show()
+```
+
+# Homologia i Diagramy Persystencji
+
+Algorytm `VietorisRipsPersistence` analizuje, jak dziury w chmurze punktów pojawiają się i znikają w miarę zmiany skali ("puchnięcia" punktów).
+
+```{python}
+#| label: fig-persistence
+#| fig-cap: "Diagram persystencji dla sygnału periodycznego"
+
+VR = VietorisRipsPersistence(homology_dimensions=[1])
+periodic_diagrams = VR.fit_transform(periodic_3d)
+random_diagrams = VR.fit_transform(random_3d)
+
+# Wyświetlamy diagram dla sinusoidy
+fig = plot_diagram(periodic_diagrams[0])
+fig.update_layout(
+    title="Diagram Persystencji (Sygnał periodyczny)",
+    height=PLOTLY_HEIGHT
+)
+fig.show()
+```
+
+### Interpretacja diagramu
+Punkt znajdujący się daleko od przekątnej (duża persystencja) to **sygnał topologiczny**. Punkty blisko przekątnej to **szum**. Sinusoida posiada jedną wielką "dziurę" w środku swojej pętli 3D, co idealnie widać na diagramie powyżej.
+
+# Entropia Topologiczna jako miara chaosu
+
+Entropia Persystentna pozwala nam określić, jak skomplikowany (nieuporządkowany) jest dany diagram.
+
+```{python}
+PE = PersistenceEntropy()
+entropy_periodic = PE.fit_transform(periodic_diagrams)
+entropy_random = PE.fit_transform(random_diagrams)
+
+print(f"Entropia dla cyklu: {entropy_periodic[0][0]:.4f}")
+print(f"Entropia dla chaosu: {entropy_random[0][0]:.4f}")
+```
+
+# Analiza sygnału zaszumionego
+
+Sprawdźmy, jak zanieczyszczenie sygnału wpływa na jego geometrię i diagram persystencji.
+
+```{python}
+#| label: fig-noisy-signal-analysis
+#| fig-cap: "Zaszumiony cykl: Sygnał, Geometria i Persystencja"
+
+noise_level = 0.2
+mixed_signal = (periodic_signal[0] * (1 - noise_level)) + (np.random.rand(500) * noise_level)
+mixed_signal = mixed_signal.reshape(1, -1)
+
+# Przetwarzanie
+mixed_3d = TE.fit_transform(mixed_signal)
+mixed_diagrams = VR.fit_transform(mixed_3d)
+entropy_mixed = PE.fit_transform(mixed_diagrams)
+
+# 1. Sygnał w czasie
+plt.figure()
+plt.plot(t, mixed_signal[0], color=COLOR_MIXED)
+plt.title("Zaszumiona sinusoida (Sygnał)")
+plt.show()
+
+# 2. Wizualizacja 3D (Pokażmy "rozmycie" pętli)
+fig_3d = go.Figure(data=[go.Scatter3d(
+    x=mixed_3d[0,:,0], y=mixed_3d[0,:,1], z=mixed_3d[0,:,2],
+    mode='markers', marker=dict(size=3, color=COLOR_MIXED, opacity=0.7)
+)])
+fig_3d.update_layout(title="Chmura punktów w 3D (Zaszumiona sinusoida)", height=PLOTLY_HEIGHT, margin=dict(l=0, r=0, b=0, t=60))
+fig_3d.show()
+
+# 3. Diagram persystencji
+print(f"Entropia dla miksu: {entropy_mixed[0][0]:.4f}")
+fig_diag = plot_diagram(mixed_diagrams[0])
+fig_diag.update_layout(title="Diagram Persystencji (Zaszumiona sinusoida)", height=PLOTLY_HEIGHT)
+fig_diag.show()
+```
+
+# Analiza krocząca i Reguły Decyzyjne
+
+W rzeczywistym systemie monitoringu musimy ustalić próg (threshold), którego przekroczenie oznacza alarm.
+
+```{python}
+#| label: fig-entropy-threshold
+#| fig-cap: "Monitorowanie entropii z wyznaczonym progiem alarmowym"
+
+# Podział sygnału zaszumionego na okna
+windows = mixed_signal.reshape(5, 100)
+pipeline = Pipeline([
+    ('embedding', TakensEmbedding(time_delay=3, dimension=3)),
+    ('persistence', VietorisRipsPersistence(homology_dimensions=[1])),
+    ('entropy', PersistenceEntropy())
+])
+window_entropies = pipeline.fit_transform(windows)
+
+# Wyznaczmy próg (np. na podstawie średniej z pierwszych okien + 2*odchylenie)
+# Tu dla przykładu ustalimy go sztywno na 7.0
+THRESHOLD = 7.0
+
+plt.figure()
+plt.plot(window_entropies.squeeze(), marker='o', linestyle='--', color=COLOR_MIXED, label="Aktualna Entropia")
+plt.axhline(y=THRESHOLD, color=COLOR_ANOMALY, linestyle=':', label="Próg Alarmowy")
+plt.title("Monitoring entropii w czasie")
+plt.xlabel("Numer okna")
+plt.ylabel("Entropia")
+plt.legend()
+plt.ylim(0, 10)
+plt.show()
+```
+
+# Eksperyment: Wykrywanie narastającej awarii
+
+Symulujemy stopniowy wzrost szumu. Zobaczymy, w którym momencie system przekroczy próg bezpieczeństwa oraz jak wizualnie rozpada się struktura geometryczna sygnału.
+
+```{python}
+#| label: fig-evolving-degradation-signal
+#| fig-cap: "Sygnał ulegający stopniowej degradacji (Symulacja awarii)"
+
+evolving_noise = np.linspace(0, 5, 500) * np.random.rand(500)
+mixed_signal_evolving = np.sin(t) + evolving_noise
+
+plt.figure()
+plt.plot(mixed_signal_evolving, color=COLOR_ANOMALY)
+plt.title("Sygnał z narastającym szumem (Czas)")
+plt.xlabel("Czas")
+plt.ylabel("Amplituda")
+plt.show()
+```
+
+```{python}
+#| label: fig-evolving-degradation-3d
+#| fig-cap: "Rozpad struktury geometrycznej (3D) w miarę narastania szumu"
+
+# Przekształcenie całego ewoluującego sygnału w 3D
+evolving_3d = TE.fit_transform(mixed_signal_evolving.reshape(1, -1))
+
+fig_evolving_3d = go.Figure(data=[go.Scatter3d(
+    x=evolving_3d[0,:,0], y=evolving_3d[0,:,1], z=evolving_3d[0,:,2],
+    mode='markers', 
+    marker=dict(
+        size=3, 
+        color=np.linspace(0, 1, len(evolving_3d[0])), # Kolor zależny od czasu
+        colorscale='Reds',
+        opacity=0.7
+    )
+)])
+fig_evolving_3d.update_layout(
+    title="Chmura punktów 3D - Narastająca degradacja (Kolor = Czas)", 
+    height=PLOTLY_HEIGHT, 
+    margin=dict(l=0, r=0, b=0, t=60)
+)
+fig_evolving_3d.show()
+```
+
+### Monitoring w oknach czasowych
+
+Obliczamy entropię dla kolejnych fragmentów sygnału, aby uchwycić moment przekroczenia limitu bezpieczeństwa.
+
+```{python}
+#| label: fig-evolving-degradation-entropy
+#| fig-cap: "Wykrycie momentu awarii przez system TDA"
+
+# Obliczenie entropii w oknach
+windows_evolving = mixed_signal_evolving.reshape(5, 100)
+window_entropies_evolving = pipeline.fit_transform(windows_evolving)
+
+plt.figure()
+plt.plot(window_entropies_evolving.squeeze(), marker='s', linestyle='-', color=COLOR_ANOMALY, label="Entropia (Awaria)")
+plt.axhline(y=THRESHOLD, color='black', linestyle=':', label="Limit bezpieczeństwa")
+plt.fill_between(np.arange(5), 4, 10, 
+                 color=COLOR_ANOMALY, alpha=0.2, label="ALARM")
+plt.title("System wczesnego ostrzegania (TDA Alarm)")
+plt.xlabel("Numer okna")
+plt.ylabel("Entropia")
+plt.legend()
+plt.ylim(0, 12)
+plt.show()
+```
+
+# Podsumowanie i wnioski
+
+Analiza TDA udowodniła, że jest potężnym narzędziem do wykrywania anomalii:
+
+- **Przewidywalność**: Dzięki entropii persystentnej możemy zamienić złożoną geometrię na pojedynczy wskaźnik alarmowy.
+
+- **Wizualizacja**: Chmury punktów w 3D pozwalają intuicyjnie zrozumieć, dlaczego sygnał traci swoją "jakość".
+
+- **Automatyzacja**: Wyznaczenie progów decyzyjnych pozwala na budowę systemów monitorujących stan urządzeń w czasie rzeczywistym.
+
+### Kolejne kroki
+- **Dostrojenie parametrów**: Automatyzacja doboru `time_delay` za pomocą analizy autokorelacji.
+- **Integracja z ML**: Wykorzystanie wektorów persystencji (Persistence Landscapes/Images) jako cech w modelach klasyfikacyjnych.

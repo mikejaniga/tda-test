@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.37">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="author" content="M. Janiga">
+
+<title>Analiza TDA: Wykrywanie anomalii w szeregach czasowych</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+</style>
+
+
+<script src="https://cdn.jsdelivr.net/npm/jquery@3.5.1/dist/jquery.min.js" integrity="sha384-ZvpUoO/+PpLXR1lu4jmpXWu80pZlYUAfxl5NsBMWOEPSjUn/6Z/hRTt8+pR6L4N2" crossorigin="anonymous"></script><script src="main_files/libs/clipboard/clipboard.min.js"></script>
+<script src="main_files/libs/quarto-html/quarto.js" type="module"></script>
+<script src="main_files/libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="main_files/libs/quarto-html/popper.min.js"></script>
+<script src="main_files/libs/quarto-html/tippy.umd.min.js"></script>
+<script src="main_files/libs/quarto-html/anchor.min.js"></script>
+<link href="main_files/libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="main_files/libs/quarto-html/quarto-syntax-highlighting-7f8f88aac4f3542376d5c11b86a4c14d.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="main_files/libs/bootstrap/bootstrap.min.js"></script>
+<link href="main_files/libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="main_files/libs/bootstrap/bootstrap-770c8e9acde89d2309ecfa54b7d9ba80.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script src="https://cdn.jsdelivr.net/npm/requirejs@2.3.6/require.min.js" integrity="sha384-c9c+LnTbwQ3aujuU7ULEPVvgLs+Fn6fJUvIGTsuu1ZcCf11fiEubah0ttpca4ntM sha384-6V1/AdqZRWk1KAlWbKBlGhN7VG4iE/yAZcO6NZPMF8od0vukrvr0tg4qY6NSrItx" crossorigin="anonymous"></script>
+
+<script type="application/javascript">define('jquery', [],function() {return window.jQuery;})</script>
+<script>
+window.PlotlyConfig = {MathJaxConfig: 'local'};
+if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}
+</script>
+<script type="module">import "https://cdn.plot.ly/plotly-3.5.0.min"</script>
+
+
+
+</head>
+
+<body class="quarto-light">
+
+<div id="quarto-content" class="page-columns page-rows-contents page-layout-article">
+<div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+  <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#wprowadzenie-do-analizy-topologicznej-danych-tda" id="toc-wprowadzenie-do-analizy-topologicznej-danych-tda" class="nav-link active" data-scroll-target="#wprowadzenie-do-analizy-topologicznej-danych-tda">Wprowadzenie do Analizy Topologicznej Danych (TDA)</a>
+  <ul class="collapse">
+  <li><a href="#kluczowe-pojęcia" id="toc-kluczowe-pojęcia" class="nav-link" data-scroll-target="#kluczowe-pojęcia">Kluczowe pojęcia</a></li>
+  </ul></li>
+  <li><a href="#ustawienia-wstępne" id="toc-ustawienia-wstępne" class="nav-link" data-scroll-target="#ustawienia-wstępne">Ustawienia wstępne</a></li>
+  <li><a href="#porównanie-bazowe-porządek-vs.-chaos" id="toc-porównanie-bazowe-porządek-vs.-chaos" class="nav-link" data-scroll-target="#porównanie-bazowe-porządek-vs.-chaos">Porównanie bazowe: Porządek vs.&nbsp;Chaos</a></li>
+  <li><a href="#geometria-danych-takens-embedding" id="toc-geometria-danych-takens-embedding" class="nav-link" data-scroll-target="#geometria-danych-takens-embedding">Geometria danych (Takens Embedding)</a></li>
+  <li><a href="#homologia-i-diagramy-persystencji" id="toc-homologia-i-diagramy-persystencji" class="nav-link" data-scroll-target="#homologia-i-diagramy-persystencji">Homologia i Diagramy Persystencji</a>
+  <ul class="collapse">
+  <li><a href="#interpretacja-diagramu" id="toc-interpretacja-diagramu" class="nav-link" data-scroll-target="#interpretacja-diagramu">Interpretacja diagramu</a></li>
+  </ul></li>
+  <li><a href="#entropia-topologiczna-jako-miara-chaosu" id="toc-entropia-topologiczna-jako-miara-chaosu" class="nav-link" data-scroll-target="#entropia-topologiczna-jako-miara-chaosu">Entropia Topologiczna jako miara chaosu</a></li>
+  <li><a href="#analiza-sygnału-zaszumionego" id="toc-analiza-sygnału-zaszumionego" class="nav-link" data-scroll-target="#analiza-sygnału-zaszumionego">Analiza sygnału zaszumionego</a></li>
+  <li><a href="#analiza-krocząca-i-reguły-decyzyjne" id="toc-analiza-krocząca-i-reguły-decyzyjne" class="nav-link" data-scroll-target="#analiza-krocząca-i-reguły-decyzyjne">Analiza krocząca i Reguły Decyzyjne</a></li>
+  <li><a href="#eksperyment-wykrywanie-narastającej-awarii" id="toc-eksperyment-wykrywanie-narastającej-awarii" class="nav-link" data-scroll-target="#eksperyment-wykrywanie-narastającej-awarii">Eksperyment: Wykrywanie narastającej awarii</a>
+  <ul class="collapse">
+  <li><a href="#monitoring-w-oknach-czasowych" id="toc-monitoring-w-oknach-czasowych" class="nav-link" data-scroll-target="#monitoring-w-oknach-czasowych">Monitoring w oknach czasowych</a></li>
+  </ul></li>
+  <li><a href="#podsumowanie-i-wnioski" id="toc-podsumowanie-i-wnioski" class="nav-link" data-scroll-target="#podsumowanie-i-wnioski">Podsumowanie i wnioski</a>
+  <ul class="collapse">
+  <li><a href="#kolejne-kroki" id="toc-kolejne-kroki" class="nav-link" data-scroll-target="#kolejne-kroki">Kolejne kroki</a></li>
+  </ul></li>
+  </ul>
+</nav>
+</div>
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default">
+<div class="quarto-title">
+<h1 class="title">Analiza TDA: Wykrywanie anomalii w szeregach czasowych</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    <div>
+    <div class="quarto-title-meta-heading">Author</div>
+    <div class="quarto-title-meta-contents">
+             <p>M. Janiga </p>
+          </div>
+  </div>
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="wprowadzenie-do-analizy-topologicznej-danych-tda" class="level1">
+<h1>Wprowadzenie do Analizy Topologicznej Danych (TDA)</h1>
+<p>Analiza Topologiczna Danych (TDA) pozwala nam spojrzeć na szeregi czasowe nie jako na zwykłe wykresy, ale jako na kształty geometryczne “zanurzone” w przestrzeni wielowymiarowej. Głównym celem tej analizy jest sprawdzenie, czy narzędzia topologiczne (takie jak homologia persystentna) potrafią skutecznie odróżnić sygnał uporządkowany od chaosu oraz czy mogą służyć jako system wczesnego ostrzegania przed awariami.</p>
+<section id="kluczowe-pojęcia" class="level2">
+<h2 class="anchored" data-anchor-id="kluczowe-pojęcia">Kluczowe pojęcia</h2>
+<ol type="1">
+<li><strong>Zanurzenie (Takens Embedding)</strong>: Przekształcamy jednowymiarowy sygnał w chmurę punktów w przestrzeni wielowymiarowej (np. 3D).</li>
+<li><strong>Filtracja (Vietoris-Rips)</strong>: Budujemy struktury geometryczne wokół punktów, zwiększając promień “kulek” wokół nich.</li>
+<li><strong>Diagram Persystencji</strong>: Rejestrujemy momenty narodzin i śmierci cech topologicznych (np. pętli). Cechy “długowieczne” to istotny sygnał, “krótkowieczne” to szum.</li>
+<li><strong>Entropia Persystentna</strong>: Jedna liczba podsumowująca stopień skomplikowania (chaosu) w strukturze topologicznej danych.</li>
+</ol>
+</section>
+</section>
+<section id="ustawienia-wstępne" class="level1">
+<h1>Ustawienia wstępne</h1>
+<p>Wczytujemy niezbędne biblioteki oraz konfigurujemy ujednolicony styl i wymiary wizualizacji.</p>
+<div id="1047f59c" class="cell" data-execution_count="1">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb1"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> sys</span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> os</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> numpy <span class="im">as</span> np</span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> matplotlib.pyplot <span class="im">as</span> plt</span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.graph_objects <span class="im">as</span> go</span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> plotly.io <span class="im">as</span> pio</span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="im">import</span> seaborn <span class="im">as</span> sns</span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gtda.time_series <span class="im">import</span> TakensEmbedding</span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gtda.homology <span class="im">import</span> VietorisRipsPersistence</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gtda.diagrams <span class="im">import</span> PersistenceEntropy</span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> gtda.plotting <span class="im">import</span> plot_diagram</span>
+<span id="cb1-12"><a href="#cb1-12" aria-hidden="true" tabindex="-1"></a><span class="im">from</span> sklearn.pipeline <span class="im">import</span> Pipeline</span>
+<span id="cb1-13"><a href="#cb1-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-14"><a href="#cb1-14" aria-hidden="true" tabindex="-1"></a><span class="co"># --- Konfiguracja wizualizacji ---</span></span>
+<span id="cb1-15"><a href="#cb1-15" aria-hidden="true" tabindex="-1"></a><span class="co"># Definicja standardowych wymiarów</span></span>
+<span id="cb1-16"><a href="#cb1-16" aria-hidden="true" tabindex="-1"></a>FIG_WIDTH <span class="op">=</span> <span class="dv">8</span></span>
+<span id="cb1-17"><a href="#cb1-17" aria-hidden="true" tabindex="-1"></a>FIG_HEIGHT <span class="op">=</span> <span class="dv">4</span></span>
+<span id="cb1-18"><a href="#cb1-18" aria-hidden="true" tabindex="-1"></a>PLOTLY_HEIGHT <span class="op">=</span> <span class="dv">500</span></span>
+<span id="cb1-19"><a href="#cb1-19" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-20"><a href="#cb1-20" aria-hidden="true" tabindex="-1"></a><span class="co"># Ujednolicony styl Matplotlib/Seaborn</span></span>
+<span id="cb1-21"><a href="#cb1-21" aria-hidden="true" tabindex="-1"></a>sns.set_theme(style<span class="op">=</span><span class="st">"whitegrid"</span>)</span>
+<span id="cb1-22"><a href="#cb1-22" aria-hidden="true" tabindex="-1"></a>plt.rcParams.update({</span>
+<span id="cb1-23"><a href="#cb1-23" aria-hidden="true" tabindex="-1"></a>    <span class="st">'figure.figsize'</span>: (FIG_WIDTH, FIG_HEIGHT),</span>
+<span id="cb1-24"><a href="#cb1-24" aria-hidden="true" tabindex="-1"></a>    <span class="st">'axes.titlesize'</span>: <span class="dv">14</span>,</span>
+<span id="cb1-25"><a href="#cb1-25" aria-hidden="true" tabindex="-1"></a>    <span class="st">'axes.labelsize'</span>: <span class="dv">12</span>,</span>
+<span id="cb1-26"><a href="#cb1-26" aria-hidden="true" tabindex="-1"></a>    <span class="st">'xtick.labelsize'</span>: <span class="dv">10</span>,</span>
+<span id="cb1-27"><a href="#cb1-27" aria-hidden="true" tabindex="-1"></a>    <span class="st">'ytick.labelsize'</span>: <span class="dv">10</span>,</span>
+<span id="cb1-28"><a href="#cb1-28" aria-hidden="true" tabindex="-1"></a>    <span class="st">'lines.linewidth'</span>: <span class="fl">1.5</span>,</span>
+<span id="cb1-29"><a href="#cb1-29" aria-hidden="true" tabindex="-1"></a>    <span class="st">'legend.fontsize'</span>: <span class="dv">11</span>,</span>
+<span id="cb1-30"><a href="#cb1-30" aria-hidden="true" tabindex="-1"></a>    <span class="st">'figure.dpi'</span>: <span class="dv">100</span></span>
+<span id="cb1-31"><a href="#cb1-31" aria-hidden="true" tabindex="-1"></a>})</span>
+<span id="cb1-32"><a href="#cb1-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-33"><a href="#cb1-33" aria-hidden="true" tabindex="-1"></a><span class="co"># Stałe kolorystyczne (Semantyczne)</span></span>
+<span id="cb1-34"><a href="#cb1-34" aria-hidden="true" tabindex="-1"></a>COLOR_HEALTHY <span class="op">=</span> <span class="st">"#1f77b4"</span>  <span class="co"># Niebieski</span></span>
+<span id="cb1-35"><a href="#cb1-35" aria-hidden="true" tabindex="-1"></a>COLOR_ANOMALY <span class="op">=</span> <span class="st">"#d62728"</span>  <span class="co"># Czerwony</span></span>
+<span id="cb1-36"><a href="#cb1-36" aria-hidden="true" tabindex="-1"></a>COLOR_MIXED   <span class="op">=</span> <span class="st">"#9467bd"</span>  <span class="co"># Fioletowy</span></span>
+<span id="cb1-37"><a href="#cb1-37" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-38"><a href="#cb1-38" aria-hidden="true" tabindex="-1"></a><span class="co"># Ujednolicony styl Plotly</span></span>
+<span id="cb1-39"><a href="#cb1-39" aria-hidden="true" tabindex="-1"></a>pio.templates.default <span class="op">=</span> <span class="st">"plotly_white"</span></span>
+<span id="cb1-40"><a href="#cb1-40" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-41"><a href="#cb1-41" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Python executable: </span><span class="sc">{</span>sys<span class="sc">.</span>executable<span class="sc">}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Python executable: /home/mj/Projekty/test/tda-test/.venv/bin/python3</code></pre>
+</div>
+</div>
+</section>
+<section id="porównanie-bazowe-porządek-vs.-chaos" class="level1">
+<h1>Porównanie bazowe: Porządek vs.&nbsp;Chaos</h1>
+<p>Zaczynamy od wygenerowania dwóch skrajnych sygnałów: idealnej sinusoidy (reprezentującej zdrowy, cykliczny proces) oraz całkowicie losowego szumu (reprezentującego awarię lub chaos).</p>
+<div id="cell-fig-signals" class="cell" data-execution_count="2">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb3"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a>t <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="dv">10</span>, <span class="dv">500</span>)</span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a>periodic_signal <span class="op">=</span> np.sin(t).reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>random_signal <span class="op">=</span> np.random.rand(<span class="dv">500</span>).reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>plt.plot(t, periodic_signal[<span class="dv">0</span>], label<span class="op">=</span><span class="st">"Zdrowe zachowanie (Cykl)"</span>, color<span class="op">=</span>COLOR_HEALTHY)</span>
+<span id="cb3-7"><a href="#cb3-7" aria-hidden="true" tabindex="-1"></a>plt.plot(t, random_signal[<span class="dv">0</span>], label<span class="op">=</span><span class="st">"Awaria (Chaos)"</span>, color<span class="op">=</span>COLOR_ANOMALY, alpha<span class="op">=</span><span class="fl">0.6</span>)</span>
+<span id="cb3-8"><a href="#cb3-8" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Porównanie sygnałów w dziedzinie czasu"</span>)</span>
+<span id="cb3-9"><a href="#cb3-9" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Czas"</span>)</span>
+<span id="cb3-10"><a href="#cb3-10" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Amplituda"</span>)</span>
+<span id="cb3-11"><a href="#cb3-11" aria-hidden="true" tabindex="-1"></a>plt.legend(loc<span class="op">=</span><span class="st">"upper right"</span>)</span>
+<span id="cb3-12"><a href="#cb3-12" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-signals" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-signals-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="main_files/figure-html/fig-signals-output-1.png" width="717" height="401" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-signals-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;1: Porównanie zdrowego sygnału (cykl) i awarii (chaos)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="geometria-danych-takens-embedding" class="level1">
+<h1>Geometria danych (Takens Embedding)</h1>
+<p>Aby zastosować TDA, musimy zamienić wykres 2D w chmurę punktów w 3D. Wykorzystujemy do tego twierdzenie Takensa. Parametry <code>time_delay</code> (przesunięcie) oraz <code>dimension</code> (liczba wymiarów) zostały tutaj dobrane eksperymentalnie tak, aby uzyskać czytelną strukturę geometryczną.</p>
+<div id="cell-fig-3d-embedding" class="cell" data-execution_count="3">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb4"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>TE <span class="op">=</span> TakensEmbedding(time_delay<span class="op">=</span><span class="dv">10</span>, dimension<span class="op">=</span><span class="dv">3</span>)</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>periodic_3d <span class="op">=</span> TE.fit_transform(periodic_signal)</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>random_3d <span class="op">=</span> TE.fit_transform(random_signal)</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Wizualizacja 3D dla sinusoidy</span></span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> go.Figure(data<span class="op">=</span>[go.Scatter3d(</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span>periodic_3d[<span class="dv">0</span>,:,<span class="dv">0</span>],</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>    y<span class="op">=</span>periodic_3d[<span class="dv">0</span>,:,<span class="dv">1</span>],</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>    z<span class="op">=</span>periodic_3d[<span class="dv">0</span>,:,<span class="dv">2</span>],</span>
+<span id="cb4-10"><a href="#cb4-10" aria-hidden="true" tabindex="-1"></a>    mode<span class="op">=</span><span class="st">'markers'</span>,</span>
+<span id="cb4-11"><a href="#cb4-11" aria-hidden="true" tabindex="-1"></a>    marker<span class="op">=</span><span class="bu">dict</span>(size<span class="op">=</span><span class="dv">3</span>, color<span class="op">=</span>COLOR_HEALTHY, opacity<span class="op">=</span><span class="fl">0.8</span>)</span>
+<span id="cb4-12"><a href="#cb4-12" aria-hidden="true" tabindex="-1"></a>)])</span>
+<span id="cb4-13"><a href="#cb4-13" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb4-14"><a href="#cb4-14" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Chmura punktów w 3D (Sygnał periodyczny)"</span>,</span>
+<span id="cb4-15"><a href="#cb4-15" aria-hidden="true" tabindex="-1"></a>    height<span class="op">=</span>PLOTLY_HEIGHT,</span>
+<span id="cb4-16"><a href="#cb4-16" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span><span class="bu">dict</span>(l<span class="op">=</span><span class="dv">0</span>, r<span class="op">=</span><span class="dv">0</span>, b<span class="op">=</span><span class="dv">0</span>, t<span class="op">=</span><span class="dv">60</span>),</span>
+<span id="cb4-17"><a href="#cb4-17" aria-hidden="true" tabindex="-1"></a>    scene<span class="op">=</span><span class="bu">dict</span>(xaxis_title<span class="op">=</span><span class="st">'X'</span>, yaxis_title<span class="op">=</span><span class="st">'Y'</span>, zaxis_title<span class="op">=</span><span class="st">'Z'</span>)</span>
+<span id="cb4-18"><a href="#cb4-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb4-19"><a href="#cb4-19" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="fig-3d-embedding" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-3d-embedding-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div>            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.5.0.min.js" integrity="sha256-fHbNLP+GlIXN+efbQec78UkemUz3NJp7UmfGxC1tNxs=" crossorigin="anonymous"></script>                <div id="3ac2fa02-c94f-4950-848a-39447aa13a43" class="plotly-graph-div" style="height:500px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("3ac2fa02-c94f-4950-848a-39447aa13a43")) {                    Plotly.newPlot(                        "3ac2fa02-c94f-4950-848a-39447aa13a43",                        [{"marker":{"color":"#1f77b4","opacity":0.8,"size":3},"mode":"markers","x":{"dtype":"f8","bdata":"AAAAAAAAAAAvNZL\u002fCIWUP7tEEPn6g6Q\u002fO0UWgVXDrj9sO08yw3+0P\u002fd31CHAm7k\u002fwg2SFhu1vj+ruqTupuXBP64x6UrpbsQ\u002fgxtv4BH2xj+wudgm3nrJP0vt6NML\u002fcs\u002fbuFT4lh8zj+iT0TMQXzQP3VsuUeluNE\u002fsByaXDbz0j9PROqz1CvUP8758ylgYtU\u002fx2SV0biW1j8VAIn3vsjXPyrppyVT+Ng\u002fzOYlJlYl2j8f0sYGqU\u002fbP34NDRwtd9w\u002ferVgBMSb3T\u002fkOC+rT73eP9gFA0yy298\u002fHn3JOmd74D+ho2SGQwfhPx284KdfkeE\u002f96ZebK0Z4j9oEIjQHqDiP30+AAKmJOM\u002fK9bPYDWn4z8DcsuAvyfkP7Dl9Co3puQ\u002f7AnXXo8i5T8g7dtTu5zlP5hFnXquFOY\u002fnQIvflyK5j+C2mNFuf3mP1G0C\u002fS4buc\u002fQcwr7E\u002fd5z\u002f6cjDPcknoPylIGH8Ws+g\u002fptGYHzAa6T8OUTwXtX7pP366eBCb4Ok\u002fta+\u002f+tc\u002f6j+oY4cLYpzqP1RLTL8v9uo\u002fSIGL2jdN6z8nwrVqcaHrPznpGsfT8us\u002fttTNkVZB7D+DmoC48YzsP5f2WHWd1ew\u002fUN28T1Ib7T+jHBcdCV7tP+f3kwG7ne0\u002f8KrVcGHa7T\u002fMwaAu9hPuP4YzgE9zSu4\u002f\u002fy5hOdN97j\u002ffiSakEK7uP3HCM5om2+4\u002fKYbveBAF7z9erz3xySvvP7Kt8AdPT+8\u002fg00yFpxv7z+X0+PJrYzvPypj9SWBpu8\u002fW6W0ghO97z\u002fkqRKOYtDvP\u002fX54Ets4O8\u002f39YFFi\u002ft7z80n6ecqfbvP+tVT+ba\u002fO8\u002f+EcCUML\u002f7z+yzVKNX\u002f\u002fvP1AmaKiy++8\u002fsWz9Abz07z+JpVdRfOrvP\u002fXnMqT03O8\u002faaKmXibM7z\u002fX\u002fgA7E7jvP8VpmUm9oO8\u002fDUGa8CaG7z\u002fUr8HrUmjvPzu+GUxER+8\u002fKJynd\u002f4i7z96LxIphfvuP93uP2\u002fc0O4\u002fQxPsrAij7j8bKzOYDnLuPwMbFzrzPe4\u002fzJj67bsG7j9sLhRhbsztP0nT2JEQj+0\u002fYCtez6hO7T9PfLS4PQvtP4FpODzWxOw\u002fTInclnl77D\u002fC5WpTLy\u002fsP+N8vkn\u002f3+s\u002fb9T0nfGN6z\u002fEtpe\u002fDjnrP5Uuv2hf4eo\u002fh9grneyG6j8solmpvynqP74OiyHiyek\u002f5xrN4F1n6T9M2fMHPQLpP8Xij\u002fyJmug\u002fYbXcZ08w6D+pHqg1mMPnP6HNMpNvVOc\u002fbyoK7uDi5j+Xkdvy927mP+oRQYzA+OU\u002fuMyH4UaA5T9aGHBVlwXlP0SG54S+iOQ\u002fve28RckJ5D\u002fXnU6lxIjjP9rYMue9BeM\u002f+bzag8KA4j+\u002fvS8n4PnhPwvTK68kceE\u002fP4JsKp7m4D9v58DWWlrgP\u002fvIZT\u002fSmN8\u002fHTkXOq953j9FxqYialfdP+WLmtAgMtw\u002f0bPcavEJ2z9L5qFk+t7ZP5niR3pasdg\u002ftJEsrjCB1z8R531FnE7WP5biAsW8GdU\u002f\u002fwje7bHi0z\u002fKp0m6m6nSPyo6TlqabtE\u002faUZzMM4x0D96E9acr+bNP5OWcuOvZss\u002fulqrAN\u002fjyD8JrZMKf17GP\u002f6Ul1rS1sM\u002f35qphhtNwT+EqNS0OoO9P9HYlKA1abg\u002fGrlPFa5Msz8EI5wzVVysPyLiIdJjHKI\u002fzvS9I1dqjz90Y9qhN0Bzv5EqvbjIVJm\u002fmUj9bHTrpr\u002fMuO+iFJWwvyWBaKK6srW\u002fEB2tkCXOur+1ajcEz+a\u002fv6pJBG4YfsK\u002fjJK5puIGxb+QJe54g43Hv99eOWq4Ecq\u002fBP\u002fsPz+TzL9mPOQF1hHPv7XJpYqdxtC\u002fRVKwjZYC0r+othSQtTzTvwAWkUbadNS\u002fcJ\u002fwmeSq1b9TJ1iqtN7Wvz0MjdIqENi\u002fehQ2qyc\u002f2b917xUOjGvavwEFPxk5ldu\u002fTT9AMhC83L\u002fnekoJ89\u002fdv\u002fhKTpzDAN+\u002fe98IHTIP4L9w7J7CW5zgvwSysTvQJ+G\u002fEG77MYGx4b+Ai6F9YDniv1MxqSZgv+K\u002fzuVmZnJD47+6H+moicXjv8ugXY6YReS\u002fAHRx7JHD5L9BbKvPaD\u002flv0P\u002fwHwQueW\u002fxlnlcXww5r\u002faihJooKXmvwukTFRwGOe\u002fla3eaOCI57+qTZEW5fbnvz0D2w1zYui\u002ft9QJQH\u002fL6L8kVGbg\u002fjHpv\u002fLaT2Xnlem\u002fBOBRiS736b9tSzJMylXqv1Os+POwseq\u002fqjXuDdkK67+tZ5ZvOWHrvzFMoDfJtOu\u002fdC3Qzn8F7L8Br+HoVFPsv60xYoVAnuy\u002f\u002fWuD8Drm7L+EIebDPCvtv1fkXOc+be2\u002fYMymkTqs7b+sESJJKejtvxh3duQEIe6\u002fAXQ3i8dW7r8gDH62a4nuv\u002fhFejHsuO6\u002fsDD8GUTl7r9ma\u002fTgbg7vv6Ug7EpoNO+\u002fwWl0cCxX77+qDo2+t3bvv32XAvcGk++\u002fW6bDMBes77+akC3Y5cHvv4svUK9w1O+\u002fveEozrXj77\u002fOttSis+\u002fvv4jAufFo+O+\u002fG4Wn1dT9778Sj+6\u002f9v\u002fvv50Yb3jO\u002fu+\u002fr9CeHVz6779VuYUkoPLvv5sfslib5++\u002fN64j3E7Z778onS0nvMfvv1ABUAjlsu+\u002fFEAIpMua77\u002fLq5h0cn\u002fvv+NOx0ncYO+\u002fYuyTSAw\u002f779jPeXqBRrvv\u002f9zLf\u002fM8e6\u002fOg0GqGXG7r8C\u002fMJb1Jfuv6I4\u002feMdZu6\u002fmMAUXUcx7r\u002fpE6o1Vvntv6E9Dy5Qvu2\u002fR3awVzuA7b\u002fGb3QUHj\u002ftv1hbFBb\u002f+uy\u002fi7prXeWz7L+LDcA52Gnsv8pxAEjfHOy\u002fkET9cQLN67873pftSXrrv3F76ju+JOu\u002fvmpoKGjM6r9ClfbHUHHqv5Z6\u002fHeBE+q\u002fJbht3QOz6b+7Nczj4U\u002fpv\u002fEQI7wl6ui\u002ffWL629mB6L84+UP8CBfov6cmQRi+qee\u002ffLphbAQ6579vShx158fmvzzlv+1yU+a\u002fY08\u002fz7Lc5b\u002fE6fVOs2PlvzliZt2A6OS\u002flk\u002fzJChr5L882pEItuvjv8uTdqI3auO\u002f+aC8Qrrm4r+RWAduS2HivxB8Htz42eG\u002fDC6FdtBQ4b8HzAtX4MXgv8DQXMY2OeC\u002fKssJdcRV37+bkuyq4jXev7tnD8flEt2\u002fX7zds+vs27+MrG2qEsTav8qQZC95mNm\u002fTcvTDz5q2L9kIw5egDnXv90Bdm5fBta\u002fVuNE1PrQ1L8YVExecpnTv+XLsBPmX9K\u002fAb+eMHYk0b9NePRFhs7Pv9vaEg7bUM2\u002f6qg0SCzQyr8uNUjSu0zIv12ZyNLLxsW\u002fBLnwsZ4+w789gecSd7TAv641zJkvUby\u002fp4GxyIc2t78U5PUHfRmyvyXHvtcr9am\u002flXm05mRpn784cOLNbsqFv0OMsrIpQIM\u002frh09xmMknj8R0OuyzFKpP08y9YNmyLE\u002f3pU6qZLltj\u002f\u002fMJExZAC8P0YPnGEqjMA\u002fozIZKG8Wwz93jQeSvZ7FP4Uq1PjSJMg\u002f2rxr8Gyoyj9PxQ5OSSnNP37\u002fHi8mp88\u002fyrLy\u002f+AQ0T9nCyjBbUzSP0a4U+oYhtM\u002f1NMcPMK91D9bGv6rSfPVP8oxkWePJtc\u002f9ivU13NX2D9F7mik14XZP3Yozrabsdo\u002fRYaRPaHa2z8Dx3qvyQDdP9For872I94\u002f9ZPOqwpE3z+XeoLUczDgP44ajD44veA\u002f0N40G0RI4T\u002fFPvgeidHhP9qtFC35WOI\u002foAb\u002fWIbe4j\u002fgANHnImLjP0ONslHB4+M\u002fAfE9Q1Rj5D+Ffd6ezuDkP32\u002fKX4jXOU\u002fOQIzM0bV5T8GBNlJKkzmP6W5DYnDwOY\u002fAv8X9AUz5z\u002fYE8\u002fL5aLnP0bEz49XEOg\u002fMx2r\u002f0976D+gjQ4cxOPoPyVW5SepSek\u002fPClzqfSs6T\u002f+3mdrnA3qPzAg7H2Wa+o\u002fvOymN9nG6j8E47s2Wx\u002frP8YtwmETdes\u002fBP+z6PjH6z+of9ZFAxjsP74bmj4qZew\u002feRRz5GWv7D9iQaqVrvbsP6zrJf78Ou0\u002fqa4qGEp87T\u002fSSRQtj7rtPxNRBtbF9e0\u002fiKmU\u002fOct7j8mwWPb72LuP8pwwP7XlO4\u002fQXkvRZvD7j9jjPTfNO\u002fuP3TUkFOgF+8\u002fquw4eNk87z\u002flPkJ63F7vPza7h9qlfe8\u002f7d7FbjKZ7z+nAe5hf7HvP+DfcDSKxu8\u002fVVuAvFDY7z9uakgm0ebvP+EwH\u002fQJ8u8\u002fkTys\u002fvn57z+v4gZ1oP7vP+u5y9z8\u002f+8\u002fjy8pEg\u002f+7z8yNuNH1\u002fjvP6MNTgdW8O8\u002fmCRAMIzk7z+RFfv4etXvP0zBC+4jw+8\u002fFooh8oit7z8qtNw9rJTvPy\u002fwk1+QeO8\u002f4RUROzhZ7z\u002fVFUUJpzbvPw0q81fgEO8\u002fQk5TCejn7j9WCaxTwrvuP3mS48BzjO4\u002fmF0ILgFa7j8IG9HKbyTuP9w3FBnF6+0\u002f0uw27Aaw7T+76pNoO3HtPy602QJpL+0\u002fJbVgf5bq7D\u002fQKXnxyqLsP1bnsLoNWOw\u002fIxkRimYK7D8hB1Rb3bnrP3n5EnZ6Zus\u002fg0\u002fsbEYQ6z9R4KEcSrfqP9C7L6uOW+o\u002fB2Xbhh396T97nTtlAJzpP8TbOEJBOOk\u002fZ4cGX+rR6D\u002f2FBVBBmnoP1ge\u002fbCf\u002fec\u002fTJNjucGP5z8dINeldx\u002fnP3DnpgHNrOY\u002fcq6yls035j9ZmjRshcDlPyefhMUAR+U\u002fP8DVIEzL5D8HRO01dE3kPxb80\u002fSFzeM\u002fFMWBhI5L4z9VYINBm8fiP37Lmry5QeI\u002fGTpaufe54T\u002fF1bksYzDhP2hqqDsKpeA\u002fviOXOfsX4D\u002fLBgFOiRLfPyJq1V\u002fq8d0\u002f6dHKVDfO3D+FtwYqjqfbP+BonyoNfto\u002fzMB+7NJR2T91LT1N\u002fiLYP2hZ9W6u8dY\u002fasgQtQK+1T8Gvg3BGojUPyHCPm8WUNM\u002fQBmE0xUW0j+qhv81OdrQP9RehR9COc8\u002faenwDty6zD\u002fhPhPcgTnKP5FlenZ1tcc\u002fxoCpFPkuxT9zLUotT6bCP4lGV3C6G8A\u002fB4qDgPseuz9W3SBWuAO2P2YY9sYx5rA\u002fwlwH6NyNpz\u002fQyw6w1JmaP3VR3tjNVHg\u002fZWY8thvgjL+jM5KY6Xmhv5zEDlAAuqu\u002fiq23pp77sr8v\u002fpGKSRi4v\u002f9IK0l6Mr2\u002fHDKlTNUkwb+TIVtAqq7Dv0IJ\u002fjB5Nsa\u002f"},"y":{"dtype":"f8","bdata":"sLnYJt56yT9L7ejTC\u002f3LP27hU+JYfM4\u002fok9EzEF80D91bLlHpbjRP7Acmlw289I\u002fT0Tqs9Qr1D\u002fO+fMpYGLVP8dkldG4ltY\u002fFQCJ977I1z8q6aclU\u002fjYP8zmJSZWJdo\u002fH9LGBqlP2z9+DQ0cLXfcP3q1YATEm90\u002f5Dgvq0+93j\u002fYBQNMstvfPx59yTpne+A\u002foaNkhkMH4T8dvOCnX5HhP\u002femXmytGeI\u002faBCI0B6g4j99PgACpiTjPyvWz2A1p+M\u002fA3LLgL8n5D+w5fQqN6bkP+wJ116PIuU\u002fIO3bU7uc5T+YRZ16rhTmP50CL35ciuY\u002fgtpjRbn95j9RtAv0uG7nP0HMK+xP3ec\u002f+nIwz3JJ6D8pSBh\u002fFrPoP6bRmB8wGuk\u002fDlE8F7V+6T9+ungQm+DpP7Wvv\u002frXP+o\u002fqGOHC2Kc6j9US0y\u002fL\u002fbqP0iBi9o3Tes\u002fJ8K1anGh6z856RrH0\u002fLrP7bUzZFWQew\u002fg5qAuPGM7D+X9lh1ndXsP1DdvE9SG+0\u002foxwXHQle7T\u002fn95MBu53tP\u002fCq1XBh2u0\u002fzMGgLvYT7j+GM4BPc0ruP\u002f8uYTnTfe4\u002f34kmpBCu7j9xwjOaJtvuPymG73gQBe8\u002fXq898ckr7z+yrfAHT0\u002fvP4NNMhacb+8\u002fl9Pjya2M7z8qY\u002fUlgabvP1ultIITve8\u002f5KkSjmLQ7z\u002f1+eBLbODvP9\u002fWBRYv7e8\u002fNJ+nnKn27z\u002frVU\u002fm2vzvP\u002fhHAlDC\u002f+8\u002fss1SjV\u002f\u002f7z9QJmiosvvvP7Fs\u002fQG89O8\u002fiaVXUXzq7z\u002f15zKk9NzvP2mipl4mzO8\u002f1\u002f4AOxO47z\u002fFaZlJvaDvPw1BmvAmhu8\u002f1K\u002fB61Jo7z87vhlMREfvPyicp3f+Iu8\u002fei8SKYX77j\u002fd7j9v3NDuP0MT7KwIo+4\u002fGyszmA5y7j8DGxc68z3uP8yY+u27Bu4\u002fbC4UYW7M7T9J09iREI\u002ftP2ArXs+oTu0\u002fT3y0uD0L7T+BaTg81sTsP0yJ3JZ5e+w\u002fwuVqUy8v7D\u002fjfL5J\u002f9\u002frP2\u002fU9J3xjes\u002fxLaXvw456z+VLr9oX+HqP4fYK53shuo\u002fLKJZqb8p6j++Dosh4snpP+cazeBdZ+k\u002fTNnzBz0C6T\u002fF4o\u002f8iZroP2G13GdPMOg\u002fqR6oNZjD5z+hzTKTb1TnP28qCu7g4uY\u002fl5Hb8vdu5j\u002fqEUGMwPjlP7jMh+FGgOU\u002fWhhwVZcF5T9EhueEvojkP73tvEXJCeQ\u002f151OpcSI4z\u002fa2DLnvQXjP\u002fm82oPCgOI\u002fv70vJ+D54T8L0yuvJHHhPz+CbCqe5uA\u002fb+fA1lpa4D\u002f7yGU\u002f0pjfPx05Fzqved4\u002fRcamImpX3T\u002fli5rQIDLcP9Gz3GrxCds\u002fS+ahZPre2T+Z4kd6WrHYP7SRLK4wgdc\u002fEed9RZxO1j+W4gLFvBnVP\u002f8I3u2x4tM\u002fyqdJupup0j8qOk5amm7RP2lGczDOMdA\u002fehPWnK\u002fmzT+TlnLjr2bLP7paqwDf48g\u002fCa2TCn9exj\u002f+lJda0tbDP9+aqYYbTcE\u002fhKjUtDqDvT\u002fR2JSgNWm4Pxq5TxWuTLM\u002fBCOcM1VcrD8i4iHSYxyiP870vSNXao8\u002fdGPaoTdAc7+RKr24yFSZv5lI\u002fWx066a\u002fzLjvohSVsL8lgWiiurK1vxAdrZAlzrq\u002ftWo3BM\u002fmv7+qSQRuGH7Cv4ySuabiBsW\u002fkCXueIONx7\u002ffXjlquBHKvwT\u002f7D8\u002fk8y\u002fZjzkBdYRz7+1yaWKncbQv0VSsI2WAtK\u002fqLYUkLU8078AFpFG2nTUv3Cf8JnkqtW\u002fUydYqrTe1r89DI3SKhDYv3oUNqsnP9m\u002fde8VDoxr2r8BBT8ZOZXbv00\u002fQDIQvNy\u002f53pKCfPf3b\u002f4Sk6cwwDfv3vfCB0yD+C\u002fcOyewluc4L8EsrE70CfhvxBu+zGBseG\u002fgIuhfWA54r9TMakmYL\u002fiv87lZmZyQ+O\u002fuh\u002fpqInF47\u002fLoF2OmEXkvwB0ceyRw+S\u002fQWyrz2g\u002f5b9D\u002f8B8ELnlv8ZZ5XF8MOa\u002f2ooSaKCl5r8LpExUcBjnv5Wt3mjgiOe\u002fqk2RFuX25789A9sNc2Lov7fUCUB\u002fy+i\u002fJFRm4P4x6b\u002fy2k9l55XpvwTgUYku9+m\u002fbUsyTMpV6r9TrPjzsLHqv6o17g3ZCuu\u002frWeWbzlh678xTKA3ybTrv3Qt0M5\u002fBey\u002fAa\u002fh6FRT7L+tMWKFQJ7sv\u002f1rg\u002fA65uy\u002fhCHmwzwr7b9X5FznPm3tv2DMppE6rO2\u002frBEiSSno7b8Yd3bkBCHuvwF0N4vHVu6\u002fIAx+tmuJ7r\u002f4RXox7Ljuv7Aw\u002fBlE5e6\u002fZmv04G4O77+lIOxKaDTvv8FpdHAsV++\u002fqg6Nvrd27799lwL3BpPvv1umwzAXrO+\u002fmpAt2OXB77+LL1CvcNTvv73hKM614++\u002fzrbUorPv77+IwLnxaPjvvxuFp9XU\u002fe+\u002fEo\u002fuv\u002fb\u002f77+dGG94zv7vv6\u002fQnh1c+u+\u002fVbmFJKDy77+bH7JYm+fvvzeuI9xO2e+\u002fKJ0tJ7zH779QAVAI5bLvvxRACKTLmu+\u002fy6uYdHJ\u002f77\u002fjTsdJ3GDvv2Lsk0gMP++\u002fYz3l6gUa77\u002f\u002fcy3\u002fzPHuvzoNBqhlxu6\u002fAvzCW9SX7r+iOP3jHWbuv5jAFF1HMe6\u002f6ROqNVb57b+hPQ8uUL7tv0d2sFc7gO2\u002fxm90FB4\u002f7b9YWxQW\u002f\u002frsv4u6a13ls+y\u002fiw3AOdhp7L\u002fKcQBI3xzsv5BE\u002fXECzeu\u002fO96X7Ul6679xe+o7viTrv75qaChozOq\u002fQpX2x1Bx6r+Wevx3gRPqvyW4bd0Ds+m\u002fuzXM4+FP6b\u002fxECO8Jerov31i+tvZgei\u002fOPlD\u002fAgX6L+nJkEYvqnnv3y6YWwEOue\u002fb0ocdefH5r885b\u002ftclPmv2NPP8+y3OW\u002fxOn1TrNj5b85YmbdgOjkv5ZP8yQoa+S\u002fPNqRCLbr47\u002fLk3aiN2rjv\u002fmgvEK65uK\u002fkVgHbkth4r8QfB7c+NnhvwwuhXbQUOG\u002fB8wLV+DF4L\u002fA0FzGNjngvyrLCXXEVd+\u002fm5LsquI13r+7Zw\u002fH5RLdv1+83bPr7Nu\u002fjKxtqhLE2r\u002fKkGQveZjZv03L0w8+ati\u002fZCMOXoA517\u002fdAXZuXwbWv1bjRNT60NS\u002fGFRMXnKZ07\u002fly7AT5l\u002fSvwG\u002fnjB2JNG\u002fTXj0RYbOz7\u002fb2hIO21DNv+qoNEgs0Mq\u002fLjVI0rtMyL9dmcjSy8bFvwS58LGePsO\u002fPYHnEne0wL+uNcyZL1G8v6eBsciHNre\u002fFOT1B30Zsr8lx77XK\u002fWpv5V5tOZkaZ+\u002fOHDizW7Khb9DjLKyKUCDP64dPcZjJJ4\u002fEdDrssxSqT9PMvWDZsixP96VOqmS5bY\u002f\u002fzCRMWQAvD9GD5xhKozAP6MyGShvFsM\u002fd40Hkr2exT+FKtT40iTIP9q8a\u002fBsqMo\u002fT8UOTkkpzT9+\u002fx4vJqfPP8qy8v\u002fgENE\u002fZwsowW1M0j9GuFPqGIbTP9TTHDzCvdQ\u002fWxr+q0nz1T\u002fKMZFnjybXP\u002fYr1NdzV9g\u002fRe5opNeF2T92KM62m7HaP0WGkT2h2ts\u002fA8d6r8kA3T\u002fRaK\u002fO9iPeP\u002fWTzqsKRN8\u002fl3qC1HMw4D+OGow+OL3gP9DeNBtESOE\u002fxT74HonR4T\u002farRQt+VjiP6AG\u002f1iG3uI\u002f4ADR5yJi4z9DjbJRwePjPwHxPUNUY+Q\u002fhX3ens7g5D99vyl+I1zlPzkCMzNG1eU\u002fBgTZSSpM5j+luQ2Jw8DmPwL\u002fF\u002fQFM+c\u002f2BPPy+Wi5z9GxM+PVxDoPzMdq\u002f9Pe+g\u002foI0OHMTj6D8lVuUnqUnpPzwpc6n0rOk\u002f\u002ft5na5wN6j8wIOx9lmvqP7zspjfZxuo\u002fBOO7Nlsf6z\u002fGLcJhE3XrPwT\u002fs+j4x+s\u002fqH\u002fWRQMY7D++G5o+KmXsP3kUc+Rlr+w\u002fYkGqla727D+s6yX+\u002fDrtP6muKhhKfO0\u002f0kkULY+67T8TUQbWxfXtP4iplPznLe4\u002fJsFj2+9i7j\u002fKcMD+15TuP0F5L0Wbw+4\u002fY4z03zTv7j901JBToBfvP6rsOHjZPO8\u002f5T5Cetxe7z82u4fapX3vP+3exW4yme8\u002fpwHuYX+x7z\u002fg33A0isbvP1VbgLxQ2O8\u002fbmpIJtHm7z\u002fhMB\u002f0CfLvP5E8rP75+e8\u002fr+IGdaD+7z\u002frucvc\u002fP\u002fvP48vKRIP\u002fu8\u002fMjbjR9f47z+jDU4HVvDvP5gkQDCM5O8\u002fkRX7+HrV7z9MwQvuI8PvPxaKIfKIre8\u002fKrTcPayU7z8v8JNfkHjvP+EVETs4We8\u002f1RVFCac27z8NKvNX4BDvP0JOUwno5+4\u002fVgmsU8K77j95kuPAc4zuP5hdCC4BWu4\u002fCBvRym8k7j\u002fcNxQZxevtP9LsNuwGsO0\u002fu+qTaDtx7T8utNkCaS\u002ftPyW1YH+W6uw\u002f0Cl58cqi7D9W57C6DVjsPyMZEYpmCuw\u002fIQdUW9256z95+RJ2embrP4NP7GxGEOs\u002fUeChHEq36j\u002fQuy+rjlvqPwdl24Yd\u002fek\u002fe507ZQCc6T\u002fE2zhCQTjpP2eHBl\u002fq0eg\u002f9hQVQQZp6D9YHv2wn\u002f3nP0yTY7nBj+c\u002fHSDXpXcf5z9w56YBzazmP3KuspbNN+Y\u002fWZo0bIXA5T8nn4TFAEflPz\u002fA1SBMy+Q\u002fB0TtNXRN5D8W\u002fNP0hc3jPxTFgYSOS+M\u002fVWCDQZvH4j9+y5q8uUHiPxk6Wrn3ueE\u002fxdW5LGMw4T9oaqg7CqXgP74jlzn7F+A\u002fywYBTokS3z8iatVf6vHdP+nRylQ3ztw\u002fhbcGKo6n2z\u002fgaJ8qDX7aP8zAfuzSUdk\u002fdS09Tf4i2D9oWfVurvHWP2rIELUCvtU\u002fBr4NwRqI1D8hwj5vFlDTP0AZhNMVFtI\u002fqob\u002fNTna0D\u002fUXoUfQjnPP2np8A7cusw\u002f4T4T3IE5yj+RZXp2dbXHP8aAqRT5LsU\u002fcy1KLU+mwj+JRldwuhvAPweKg4D7Hrs\u002fVt0gVrgDtj9mGPbGMeawP8JcB+jcjac\u002f0MsOsNSZmj91Ud7YzVR4P2VmPLYb4Iy\u002fozOSmOl5ob+cxA5QALqrv4qtt6ae+7K\u002fL\u002f6RikkYuL\u002f\u002fSCtJejK9vxwypUzVJMG\u002fkyFbQKquw79CCf4weTbGv1HlFYX\u002fu8i\u002faehE3\u002fo+y78mHBolKb\u002fNv0mR7kIkHtC\u002fFzGpwAtb0b\u002f5dTt3KpbSv9K0GQFgz9O\u002fHLICK4wG1b8KGk\u002f3jjvWv890O6FIbte\u002f"},"z":{"dtype":"f8","bdata":"KumnJVP42D\u002fM5iUmViXaPx\u002fSxgapT9s\u002ffg0NHC133D96tWAExJvdP+Q4L6tPvd4\u002f2AUDTLLb3z8efck6Z3vgP6GjZIZDB+E\u002fHbzgp1+R4T\u002f3pl5srRniP2gQiNAeoOI\u002ffT4AAqYk4z8r1s9gNafjPwNyy4C\u002fJ+Q\u002fsOX0Kjem5D\u002fsCddejyLlPyDt21O7nOU\u002fmEWdeq4U5j+dAi9+XIrmP4LaY0W5\u002feY\u002fUbQL9Lhu5z9BzCvsT93nP\u002fpyMM9ySeg\u002fKUgYfxaz6D+m0ZgfMBrpPw5RPBe1fuk\u002ffrp4EJvg6T+1r7\u002f61z\u002fqP6hjhwtinOo\u002fVEtMvy\u002f26j9IgYvaN03rPyfCtWpxoes\u002fOekax9Py6z+21M2RVkHsP4OagLjxjOw\u002fl\u002fZYdZ3V7D9Q3bxPUhvtP6McFx0JXu0\u002f5\u002feTAbud7T\u002fwqtVwYdrtP8zBoC72E+4\u002fhjOAT3NK7j\u002f\u002fLmE5033uP9+JJqQQru4\u002fccIzmibb7j8phu94EAXvP16vPfHJK+8\u002fsq3wB09P7z+DTTIWnG\u002fvP5fT48mtjO8\u002fKmP1JYGm7z9bpbSCE73vP+SpEo5i0O8\u002f9fngS2zg7z\u002ff1gUWL+3vPzSfp5yp9u8\u002f61VP5tr87z\u002f4RwJQwv\u002fvP7LNUo1f\u002f+8\u002fUCZoqLL77z+xbP0BvPTvP4mlV1F86u8\u002f9ecypPTc7z9poqZeJszvP9f+ADsTuO8\u002fxWmZSb2g7z8NQZrwJobvP9SvwetSaO8\u002fO74ZTERH7z8onKd3\u002fiLvP3ovEimF++4\u002f3e4\u002fb9zQ7j9DE+ysCKPuPxsrM5gOcu4\u002fAxsXOvM97j\u002fMmPrtuwbuP2wuFGFuzO0\u002fSdPYkRCP7T9gK17PqE7tP098tLg9C+0\u002fgWk4PNbE7D9MidyWeXvsP8LlalMvL+w\u002f43y+Sf\u002ff6z9v1PSd8Y3rP8S2l78OOes\u002flS6\u002faF\u002fh6j+H2Cud7IbqPyyiWam\u002fKeo\u002fvg6LIeLJ6T\u002fnGs3gXWfpP0zZ8wc9Auk\u002fxeKP\u002fIma6D9htdxnTzDoP6keqDWYw+c\u002foc0yk29U5z9vKgru4OLmP5eR2\u002fL3buY\u002f6hFBjMD45T+4zIfhRoDlP1oYcFWXBeU\u002fRIbnhL6I5D+97bxFyQnkP9edTqXEiOM\u002f2tgy570F4z\u002f5vNqDwoDiP7+9Lyfg+eE\u002fC9MrryRx4T8\u002fgmwqnubgP2\u002fnwNZaWuA\u002f+8hlP9KY3z8dORc6r3neP0XGpiJqV90\u002f5Yua0CAy3D\u002fRs9xq8QnbP0vmoWT63tk\u002fmeJHelqx2D+0kSyuMIHXPxHnfUWcTtY\u002fluICxbwZ1T\u002f\u002fCN7tseLTP8qnSbqbqdI\u002fKjpOWppu0T9pRnMwzjHQP3oT1pyv5s0\u002fk5Zy469myz+6WqsA3+PIPwmtkwp\u002fXsY\u002f\u002fpSXWtLWwz\u002ffmqmGG03BP4So1LQ6g70\u002f0diUoDVpuD8auU8VrkyzPwQjnDNVXKw\u002fIuIh0mMcoj\u002fO9L0jV2qPP3Rj2qE3QHO\u002fkSq9uMhUmb+ZSP1sdOumv8y476IUlbC\u002fJYFoorqytb8QHa2QJc66v7VqNwTP5r+\u002fqkkEbhh+wr+Mkrmm4gbFv5Al7niDjce\u002f3145argRyr8E\u002f+w\u002fP5PMv2Y85AXWEc+\u002ftcmlip3G0L9FUrCNlgLSv6i2FJC1PNO\u002fABaRRtp01L9wn\u002fCZ5KrVv1MnWKq03ta\u002fPQyN0ioQ2L96FDarJz\u002fZv3XvFQ6Ma9q\u002fAQU\u002fGTmV279NP0AyELzcv+d6Sgnz392\u002f+EpOnMMA37973wgdMg\u002fgv3DsnsJbnOC\u002fBLKxO9An4b8QbvsxgbHhv4CLoX1gOeK\u002fUzGpJmC\u002f4r\u002fO5WZmckPjv7of6aiJxeO\u002fy6BdjphF5L8AdHHskcPkv0Fsq89oP+W\u002fQ\u002f\u002fAfBC55b\u002fGWeVxfDDmv9qKEmigpea\u002fC6RMVHAY57+Vrd5o4Ijnv6pNkRbl9ue\u002fPQPbDXNi6L+31AlAf8vovyRUZuD+Mem\u002f8tpPZeeV6b8E4FGJLvfpv21LMkzKVeq\u002fU6z487Cx6r+qNe4N2Qrrv61nlm85Yeu\u002fMUygN8m06790LdDOfwXsvwGv4ehUU+y\u002frTFihUCe7L\u002f9a4PwOubsv4Qh5sM8K+2\u002fV+Rc5z5t7b9gzKaROqztv6wRIkkp6O2\u002fGHd25AQh7r8BdDeLx1buvyAMfrZrie6\u002f+EV6Mey47r+wMPwZROXuv2Zr9OBuDu+\u002fpSDsSmg077\u002fBaXRwLFfvv6oOjb63du+\u002ffZcC9waT779bpsMwF6zvv5qQLdjlwe+\u002fiy9Qr3DU77+94SjOtePvv8621KKz7++\u002fiMC58Wj4778bhafV1P3vvxKP7r\u002f2\u002f++\u002fnRhveM7+77+v0J4dXPrvv1W5hSSg8u+\u002fmx+yWJvn7783riPcTtnvvyidLSe8x++\u002fUAFQCOWy778UQAiky5rvv8urmHRyf++\u002f407HSdxg779i7JNIDD\u002fvv2M95eoFGu+\u002f\u002f3Mt\u002f8zx7r86DQaoZcbuvwL8wlvUl+6\u002fojj94x1m7r+YwBRdRzHuv+kTqjVW+e2\u002foT0PLlC+7b9HdrBXO4Dtv8ZvdBQeP+2\u002fWFsUFv\u002f67L+Lumtd5bPsv4sNwDnYaey\u002fynEASN8c7L+QRP1xAs3rvzvel+1Jeuu\u002fcXvqO74k67++amgoaMzqv0KV9sdQceq\u002flnr8d4ET6r8luG3dA7Ppv7s1zOPhT+m\u002f8RAjvCXq6L99Yvrb2YHovzj5Q\u002fwIF+i\u002fpyZBGL6p5798umFsBDrnv29KHHXnx+a\u002fPOW\u002f7XJT5r9jTz\u002fPstzlv8Tp9U6zY+W\u002fOWJm3YDo5L+WT\u002fMkKGvkvzzakQi26+O\u002fy5N2ojdq47\u002f5oLxCuubiv5FYB25LYeK\u002fEHwe3PjZ4b8MLoV20FDhvwfMC1fgxeC\u002fwNBcxjY54L8qywl1xFXfv5uS7KriNd6\u002fu2cPx+US3b9fvN2z6+zbv4ysbaoSxNq\u002fypBkL3mY2b9Ny9MPPmrYv2QjDl6AOde\u002f3QF2bl8G1r9W40TU+tDUvxhUTF5ymdO\u002f5cuwE+Zf0r8Bv54wdiTRv0149EWGzs+\u002f29oSDttQzb\u002fqqDRILNDKvy41SNK7TMi\u002fXZnI0svGxb8EufCxnj7Dvz2B5xJ3tMC\u002frjXMmS9RvL+ngbHIhza3vxTk9Qd9GbK\u002fJce+1yv1qb+VebTmZGmfvzhw4s1uyoW\u002fQ4yysilAgz+uHT3GYySePxHQ67LMUqk\u002fTzL1g2bIsT\u002felTqpkuW2P\u002f8wkTFkALw\u002fRg+cYSqMwD+jMhkobxbDP3eNB5K9nsU\u002fhSrU+NIkyD\u002favGvwbKjKP0\u002fFDk5JKc0\u002ffv8eLyanzz\u002fKsvL\u002f4BDRP2cLKMFtTNI\u002fRrhT6hiG0z\u002fU0xw8wr3UP1sa\u002fqtJ89U\u002fyjGRZ48m1z\u002f2K9TXc1fYP0XuaKTXhdk\u002fdijOtpux2j9FhpE9odrbPwPHeq\u002fJAN0\u002f0WivzvYj3j\u002f1k86rCkTfP5d6gtRzMOA\u002fjhqMPji94D\u002fQ3jQbREjhP8U++B6J0eE\u002f2q0ULflY4j+gBv9Yht7iP+AA0eciYuM\u002fQ42yUcHj4z8B8T1DVGPkP4V93p7O4OQ\u002ffb8pfiNc5T85AjMzRtXlPwYE2UkqTOY\u002fpbkNicPA5j8C\u002fxf0BTPnP9gTz8vlouc\u002fRsTPj1cQ6D8zHav\u002fT3voP6CNDhzE4+g\u002fJVblJ6lJ6T88KXOp9KzpP\u002f7eZ2ucDeo\u002fMCDsfZZr6j+87KY32cbqPwTjuzZbH+s\u002fxi3CYRN16z8E\u002f7Po+MfrP6h\u002f1kUDGOw\u002fvhuaPipl7D95FHPkZa\u002fsP2JBqpWu9uw\u002frOsl\u002fvw67T+prioYSnztP9JJFC2Puu0\u002fE1EG1sX17T+IqZT85y3uPybBY9vvYu4\u002fynDA\u002fteU7j9BeS9Fm8PuP2OM9N807+4\u002fdNSQU6AX7z+q7Dh42TzvP+U+QnrcXu8\u002fNruH2qV97z\u002ft3sVuMpnvP6cB7mF\u002fse8\u002f4N9wNIrG7z9VW4C8UNjvP25qSCbR5u8\u002f4TAf9Any7z+RPKz++fnvP6\u002fiBnWg\u002fu8\u002f67nL3Pz\u002f7z+PLykSD\u002f7vPzI240fX+O8\u002fow1OB1bw7z+YJEAwjOTvP5EV+\u002fh61e8\u002fTMEL7iPD7z8WiiHyiK3vPyq03D2slO8\u002fL\u002fCTX5B47z\u002fhFRE7OFnvP9UVRQmnNu8\u002fDSrzV+AQ7z9CTlMJ6OfuP1YJrFPCu+4\u002feZLjwHOM7j+YXQguAVruPwgb0cpvJO4\u002f3DcUGcXr7T\u002fS7DbsBrDtP7vqk2g7ce0\u002fLrTZAmkv7T8ltWB\u002flursP9ApefHKouw\u002fVuewug1Y7D8jGRGKZgrsPyEHVFvdues\u002fefkSdnpm6z+DT+xsRhDrP1HgoRxKt+o\u002f0Lsvq45b6j8HZduGHf3pP3udO2UAnOk\u002fxNs4QkE46T9nhwZf6tHoP\u002fYUFUEGaeg\u002fWB79sJ\u002f95z9Mk2O5wY\u002fnPx0g16V3H+c\u002fcOemAc2s5j9yrrKWzTfmP1maNGyFwOU\u002fJ5+ExQBH5T8\u002fwNUgTMvkPwdE7TV0TeQ\u002fFvzT9IXN4z8UxYGEjkvjP1Vgg0Gbx+I\u002ffsuavLlB4j8ZOlq597nhP8XVuSxjMOE\u002faGqoOwql4D++I5c5+xfgP8sGAU6JEt8\u002fImrVX+rx3T\u002fp0cpUN87cP4W3BiqOp9s\u002f4GifKg1+2j\u002fMwH7s0lHZP3UtPU3+Itg\u002faFn1bq7x1j9qyBC1Ar7VPwa+DcEaiNQ\u002fIcI+bxZQ0z9AGYTTFRbSP6qG\u002fzU52tA\u002f1F6FH0I5zz9p6fAO3LrMP+E+E9yBOco\u002fkWV6dnW1xz\u002fGgKkU+S7FP3MtSi1PpsI\u002fiUZXcLobwD8HioOA+x67P1bdIFa4A7Y\u002fZhj2xjHmsD\u002fCXAfo3I2nP9DLDrDUmZo\u002fdVHe2M1UeD9lZjy2G+CMv6MzkpjpeaG\u002fnMQOUAC6q7+Krbemnvuyvy\u002f+kYpJGLi\u002f\u002f0grSXoyvb8cMqVM1STBv5MhW0CqrsO\u002fQgn+MHk2xr9R5RWF\u002f7vIv2noRN\u002f6Psu\u002fJhwaJSm\u002fzb9Jke5CJB7QvxcxqcALW9G\u002f+XU7dyqW0r\u002fStBkBYM\u002fTvxyyAiuMBtW\u002fChpP94471r\u002fPdDuhSG7Xv8lCLKCZnti\u002f3+jrqmLM2b9jGOK6hPfav9NdRA\u002fhH9y\u002fQYI\u002fMFlF3b\u002f+bBnyzmfev1MxS3gkh9+\u002fcXxJHJ5R4L8kvP5+\u002fN3gv1JP8\u002fWeaOG\u002f"},"type":"scatter3d"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"bgcolor":"white","angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"ternary":{"bgcolor":"white","aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"white","subunitcolor":"#C8D4E3","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"margin":{"l":0,"r":0,"b":0,"t":60},"title":{"text":"Chmura punktów w 3D (Sygnał periodyczny)"},"height":500,"scene":{"xaxis":{"title":{"text":"X"}},"yaxis":{"title":{"text":"Y"}},"zaxis":{"title":{"text":"Z"}}}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('3ac2fa02-c94f-4950-848a-39447aa13a43');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-3d-embedding-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;2: Zanurzenie 3D (Takens Embedding) sinusoidy - idealna pętla
+</figcaption>
+</figure>
+</div>
+</div>
+</section>
+<section id="homologia-i-diagramy-persystencji" class="level1">
+<h1>Homologia i Diagramy Persystencji</h1>
+<p>Algorytm <code>VietorisRipsPersistence</code> analizuje, jak dziury w chmurze punktów pojawiają się i znikają w miarę zmiany skali (“puchnięcia” punktów).</p>
+<div id="cell-fig-persistence" class="cell" data-execution_count="4">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb5"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a>VR <span class="op">=</span> VietorisRipsPersistence(homology_dimensions<span class="op">=</span>[<span class="dv">1</span>])</span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a>periodic_diagrams <span class="op">=</span> VR.fit_transform(periodic_3d)</span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a>random_diagrams <span class="op">=</span> VR.fit_transform(random_3d)</span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Wyświetlamy diagram dla sinusoidy</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a>fig <span class="op">=</span> plot_diagram(periodic_diagrams[<span class="dv">0</span>])</span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>fig.update_layout(</span>
+<span id="cb5-8"><a href="#cb5-8" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Diagram Persystencji (Sygnał periodyczny)"</span>,</span>
+<span id="cb5-9"><a href="#cb5-9" aria-hidden="true" tabindex="-1"></a>    height<span class="op">=</span>PLOTLY_HEIGHT</span>
+<span id="cb5-10"><a href="#cb5-10" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb5-11"><a href="#cb5-11" aria-hidden="true" tabindex="-1"></a>fig.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="fig-persistence" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-persistence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div>            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.5.0.min.js" integrity="sha256-fHbNLP+GlIXN+efbQec78UkemUz3NJp7UmfGxC1tNxs=" crossorigin="anonymous"></script>                <div id="6f12f40b-ea4d-44d0-a0ef-117fbf1a0e3f" class="plotly-graph-div" style="height:500px; width:500px;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("6f12f40b-ea4d-44d0-a0ef-117fbf1a0e3f")) {                    Plotly.newPlot(                        "6f12f40b-ea4d-44d0-a0ef-117fbf1a0e3f",                        [{"hoverinfo":"none","line":{"color":"black","dash":"dash","width":1},"mode":"lines","showlegend":false,"x":[0.023662629276514052,0.574118276387453],"y":[0.023662629276514052,0.574118276387453],"type":"scatter"},{"hoverinfo":"text","hovertext":["(0.5630463361740112, 0.5633928775787354)","(0.563019871711731, 0.5634459853172302)","(0.5628260374069214, 0.5630269646644592)","(0.5627672076225281, 0.5631330609321594)","(0.5623473525047302, 0.5624349117279053)","(0.5622885823249817, 0.5625940561294556)","(0.5615841746330261, 0.561808168888092)","(0.5606542229652405, 0.5607643723487854)","(0.034248314797878265, 0.5635325908660889)"],"mode":"markers","name":"H1","x":{"dtype":"f8","bdata":"AAAAwHkE4j8AAABAQgTiPwAAAMCrAuI\u002fAAAAYDAC4j8AAADgv\u002f7hPwAAAKBE\u002fuE\u002fAAAAYH\u002f44T8AAAAg4fDhPwAAAMD+iKE\u002f"},"y":{"dtype":"f8","bdata":"AAAAgFAH4j8AAADgvwfiPwAAACBRBOI\u002fAAAAoC8F4j8AAACAd\u002f\u002fhPwAAAEDFAOI\u002fAAAAIFX64T8AAAAgyPHhPwAAAIB1COI\u002f"},"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"bgcolor":"white","angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"ternary":{"bgcolor":"white","aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"white","subunitcolor":"#C8D4E3","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"xaxis":{"title":{"text":"Birth"},"side":"bottom","type":"linear","range":[0.023662629276514052,0.574118276387453],"autorange":false,"ticks":"outside","showline":true,"zeroline":true,"linewidth":1,"linecolor":"black","mirror":false,"showexponent":"all","exponentformat":"e"},"yaxis":{"title":{"text":"Death"},"side":"left","type":"linear","range":[0.023662629276514052,0.574118276387453],"autorange":false,"scaleanchor":"x","scaleratio":1,"ticks":"outside","showline":true,"zeroline":true,"linewidth":1,"linecolor":"black","mirror":false,"showexponent":"all","exponentformat":"e"},"width":500,"height":500,"plot_bgcolor":"white","title":{"text":"Diagram Persystencji (Sygnał periodyczny)"}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('6f12f40b-ea4d-44d0-a0ef-117fbf1a0e3f');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-persistence-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;3: Diagram persystencji dla sygnału periodycznego
+</figcaption>
+</figure>
+</div>
+</div>
+<section id="interpretacja-diagramu" class="level3">
+<h3 class="anchored" data-anchor-id="interpretacja-diagramu">Interpretacja diagramu</h3>
+<p>Punkt znajdujący się daleko od przekątnej (duża persystencja) to <strong>sygnał topologiczny</strong>. Punkty blisko przekątnej to <strong>szum</strong>. Sinusoida posiada jedną wielką “dziurę” w środku swojej pętli 3D, co idealnie widać na diagramie powyżej.</p>
+</section>
+</section>
+<section id="entropia-topologiczna-jako-miara-chaosu" class="level1">
+<h1>Entropia Topologiczna jako miara chaosu</h1>
+<p>Entropia Persystentna pozwala nam określić, jak skomplikowany (nieuporządkowany) jest dany diagram.</p>
+<div id="2c4b1521" class="cell" data-execution_count="5">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb6"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a>PE <span class="op">=</span> PersistenceEntropy()</span>
+<span id="cb6-2"><a href="#cb6-2" aria-hidden="true" tabindex="-1"></a>entropy_periodic <span class="op">=</span> PE.fit_transform(periodic_diagrams)</span>
+<span id="cb6-3"><a href="#cb6-3" aria-hidden="true" tabindex="-1"></a>entropy_random <span class="op">=</span> PE.fit_transform(random_diagrams)</span>
+<span id="cb6-4"><a href="#cb6-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb6-5"><a href="#cb6-5" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Entropia dla cyklu: </span><span class="sc">{</span>entropy_periodic[<span class="dv">0</span>][<span class="dv">0</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb6-6"><a href="#cb6-6" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Entropia dla chaosu: </span><span class="sc">{</span>entropy_random[<span class="dv">0</span>][<span class="dv">0</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Entropia dla cyklu: 0.0478
+Entropia dla chaosu: 7.1972</code></pre>
+</div>
+</div>
+</section>
+<section id="analiza-sygnału-zaszumionego" class="level1">
+<h1>Analiza sygnału zaszumionego</h1>
+<p>Sprawdźmy, jak zanieczyszczenie sygnału wpływa na jego geometrię i diagram persystencji.</p>
+<div class="cell" data-execution_count="6">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb8"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>noise_level <span class="op">=</span> <span class="fl">0.2</span></span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>mixed_signal <span class="op">=</span> (periodic_signal[<span class="dv">0</span>] <span class="op">*</span> (<span class="dv">1</span> <span class="op">-</span> noise_level)) <span class="op">+</span> (np.random.rand(<span class="dv">500</span>) <span class="op">*</span> noise_level)</span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>mixed_signal <span class="op">=</span> mixed_signal.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>)</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a><span class="co"># Przetwarzanie</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>mixed_3d <span class="op">=</span> TE.fit_transform(mixed_signal)</span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>mixed_diagrams <span class="op">=</span> VR.fit_transform(mixed_3d)</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>entropy_mixed <span class="op">=</span> PE.fit_transform(mixed_diagrams)</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a><span class="co"># 1. Sygnał w czasie</span></span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>plt.plot(t, mixed_signal[<span class="dv">0</span>], color<span class="op">=</span>COLOR_MIXED)</span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Zaszumiona sinusoida (Sygnał)"</span>)</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>plt.show()</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a><span class="co"># 2. Wizualizacja 3D (Pokażmy "rozmycie" pętli)</span></span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a>fig_3d <span class="op">=</span> go.Figure(data<span class="op">=</span>[go.Scatter3d(</span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span>mixed_3d[<span class="dv">0</span>,:,<span class="dv">0</span>], y<span class="op">=</span>mixed_3d[<span class="dv">0</span>,:,<span class="dv">1</span>], z<span class="op">=</span>mixed_3d[<span class="dv">0</span>,:,<span class="dv">2</span>],</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    mode<span class="op">=</span><span class="st">'markers'</span>, marker<span class="op">=</span><span class="bu">dict</span>(size<span class="op">=</span><span class="dv">3</span>, color<span class="op">=</span>COLOR_MIXED, opacity<span class="op">=</span><span class="fl">0.7</span>)</span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>)])</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>fig_3d.update_layout(title<span class="op">=</span><span class="st">"Chmura punktów w 3D (Zaszumiona sinusoida)"</span>, height<span class="op">=</span>PLOTLY_HEIGHT, margin<span class="op">=</span><span class="bu">dict</span>(l<span class="op">=</span><span class="dv">0</span>, r<span class="op">=</span><span class="dv">0</span>, b<span class="op">=</span><span class="dv">0</span>, t<span class="op">=</span><span class="dv">60</span>))</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>fig_3d.show()</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a><span class="co"># 3. Diagram persystencji</span></span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a><span class="bu">print</span>(<span class="ss">f"Entropia dla miksu: </span><span class="sc">{</span>entropy_mixed[<span class="dv">0</span>][<span class="dv">0</span>]<span class="sc">:.4f}</span><span class="ss">"</span>)</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>fig_diag <span class="op">=</span> plot_diagram(mixed_diagrams[<span class="dv">0</span>])</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>fig_diag.update_layout(title<span class="op">=</span><span class="st">"Diagram Persystencji (Zaszumiona sinusoida)"</span>, height<span class="op">=</span>PLOTLY_HEIGHT)</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>fig_diag.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>Entropia dla miksu: 6.5167</code></pre>
+</div>
+<div id="fig-noisy-signal-analysis" class="cell quarto-float quarto-figure quarto-figure-center anchored" data-execution_count="6">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-noisy-signal-analysis-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div class="cell-output cell-output-display">
+<div id="fig-noisy-signal-analysis-1" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-noisy-signal-analysis-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="main_files/figure-html/fig-noisy-signal-analysis-output-1.png" data-ref-parent="fig-noisy-signal-analysis" width="695" height="378" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-noisy-signal-analysis-1-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(a) Zaszumiony cykl: Sygnał, Geometria i Persystencja
+</figcaption>
+</figure>
+</div>
+</div>
+<div id="fig-noisy-signal-analysis-2" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-noisy-signal-analysis-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div>            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.5.0.min.js" integrity="sha256-fHbNLP+GlIXN+efbQec78UkemUz3NJp7UmfGxC1tNxs=" crossorigin="anonymous"></script>                <div id="0219b1ad-e2d3-4551-aa65-9c6e344cb4a4" class="plotly-graph-div" style="height:500px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("0219b1ad-e2d3-4551-aa65-9c6e344cb4a4")) {                    Plotly.newPlot(                        "0219b1ad-e2d3-4551-aa65-9c6e344cb4a4",                        [{"marker":{"color":"#9467bd","opacity":0.7,"size":3},"mode":"markers","x":{"dtype":"f8","bdata":"dT\u002fBXlnNvj\u002fpDH+uQgPJP6qK\u002f2k1bMk\u002f+PqxRgfhyz8wYSYGb1PGP7zH+uLBhsg\u002foJfYc1mQyz\u002fk7DnVP+zQP8L850hL1MQ\u002fXPaEdS4kyj99LnraAEHMPxjDvPFfRdc\u002fEq0NOKkQ1T9ckI4D+pbWP9ZQmdU9+9k\u002fBCIO\u002fMSs1z9alsT+v4rZPwhgfCBw0dQ\u002fXYo71CMd0j\u002fmBhlPj4LfP5kKqGxLW9w\u002fhaLEkEhy2z8gvKGc\u002f4jYP46Vb4BQrdc\u002fCYMCScVh3D8ge1Mj\u002fhPgP\u002foQNQ57y90\u002fItMja5583T\u002fH6BxguNTjP\u002fv3wCj9TeM\u002fv0ZqJX2X4j\u002fSF3unYDnfP363XiqMOOE\u002fxG7OtjD14z8\u002fjbDAR9HlP8Xl8Hdde+M\u002fz6K8kR244j8cP9e8jmXjP28E7CmboOQ\u002fdzFl4Saa5j+t9HncDkvlP3WZageeBeU\u002fbL\u002fCXu1u4z\u002fusMAYumjkPwerCrwaaek\u002ftGOh5SO45z8LdwXH9K7mPzYL3ejuA+g\u002fwqQSgd\u002fS5j8e0JN8fInrP5\u002f39zS9cOc\u002fGgk5p0Up7D8LnKEifv3nP3qP9XUdluc\u002fdoEeQGhN6z\u002fNPGRwkq3nP7O30z5sfew\u002frXooXAh96D96nGBb59rrP6Go8+PxPuw\u002fdgKa0Nzl6D\u002f2Xtdj6yrsPwaAJVjgje0\u002fDyawWdps7j\u002fGVcQ2wAHuP4qVosxON+o\u002fliw95kD56T9Q51Pp3uHpP94ChKjgbOs\u002fTufFUQSX7D9+WoLYQBzvP2uaXduIGe0\u002focqeZtyM7T9weQmpQSHsP+t+xjmbeu0\u002frKeeMtSO7D\u002fK9gcOTkHrP8eqQP9h6es\u002fe27OU+R77j8CU+AGRHfsP46XlZxZleo\u002f5kxB24N57z9JRt2F4jftP0ujAm+84+8\u002fdBEBq5ll7T8fBpxF5vnuP1BY+n+z4Oo\u002feakB6baq7D96g8efxqTsP0kvKUos3uo\u002fD32N+Jle6j+0HsLjcVftPyxYsfELRu4\u002f1Ouc5RCy6T\u002fyOKhZ\u002faTtPzgzVyOhrek\u002fKgd6Lgcy6j80zIDBjc\u002fqPwTQ0EwmWus\u002f6EcLTe+B6z+WqwWTEwvtP1SdOUl9++c\u002ftJ08oYu86D8OQ3XQNuPrPxJ0UI6pNuk\u002f5kGeyRfd6j+ryivfWvvmP6DtcQdyWuo\u002fug\u002f1FEE+6D8pbXltXmvnP7EDU5OTYuc\u002fdTtjVlzY6T+3c7Mr1uHpP0iwxws8bOg\u002fYbuZICQs5D8tog7UDPDoP6aa63VHYOU\u002fkgZ5DMMo5T\u002f2X42txl7lP3\u002fm3vStGOc\u002f6CMBzV3V4j+dWv39LFjhP5hEens1VuE\u002fyRkojtnH4D8ZHFPO5MviP+r6LKj9FeU\u002f0d6nv8zG4z9tN6bpnLHgPz8N4NbVjd8\u002fm+l5+Vi84D8P1mhp6sDaP0aZUi59EeE\u002fBkIXERko4D\u002fAs0R6PKDYP2\u002ftK4jBcNc\u002fxGmgVb+P4D9F\u002f4gJaIvVP7xMqcTpFds\u002fOgILVMLc2z+6Gd7rib7UP08aC5p1zNE\u002f4MlBg2uT0z\u002fgBB\u002fKgiHVP6qUz9hwn9o\u002fgq+v\u002fmPq1D+km9eg2EbTP2N1vWLWGss\u002fjqit\u002fabWyz\u002fUgBnRvYfIP0gY96WSAdI\u002fNFqe4isPxz+gH4nJPVTCP7WYeVmSbtA\u002fl9BuAETOzD8MbyO5TvzLP1hjmmtvYsc\u002flsr+P8qyoj9fUXoSHJnDP4t43t1oU7o\u002fpy7OaqtaoT+jgAwENt2iP6wzuE2lLKa\u002fDfOQYtNDqb8g2I1iO7KiP2gfAjm+wbO\u002fbJfPZQfok79sCiuju0mtv4yGUex6kLm\u002foLlp7Jy\u002fej\u002fkvSnPpb+kv6j9pY8ShpS\u002fFH8c4Gi8s79sNDq2LBWmvzlaQzTvxMq\u002ftNI41fMEtb+YZ5OwS3nQv0Srva\u002fL+Mm\u002fgG2\u002fDRotzr+iy1OTbafEvzmBLlc3stC\u002fZsPFkeP6xr8txjOzL4HUv4B8cJKlG8q\u002fIq2AW8DszL9qkmte9Z\u002fRv+CiConidtO\u002flDQqpyBf27+i6AhQ4NHYvyG8PO5wMtW\u002fUwy8ynZ50r\u002fJuq8Lt6LWv5oFNg8kMNS\u002fdpb\u002f9eC12r8CkiRkpFHXvwvdfHAOoOC\u002f3DLX93Ps1r9pkLBDQI3hv8LRN2xqPeK\u002fDXhlrzvO4r+mvsyMLzvgvySjdciXBN2\u002fQXxY7CDg4r+Sa5yRxonevzOW48ptKOO\u002fPawHbHBE4L+rxWqHaXzkv4SP3NpTkOC\u002fxdh9T9jC478SeYYdiRDjv0VU4VVhp+S\u002fXroT7eHH5b9tMEKb5ffjv9Lp6MMcGOO\u002ftw81vPOS47+iKi1GaWrkv\u002f7HSZO6FOK\u002fXPXsfXaS5r+cfv2FB43jv9hlUrN41uG\u002fqS\u002ffquaY4r\u002fQeYkFbMTmv7IWXenIJeS\u002fuvdW1DUK57+Yo6Z0ZVrnv9zWo+ZNjOS\u002f9DHg6++S6L9ug+6F49Djv3Fdmhk4+Oa\u002fF1hMHtic47\u002fdlqUc1wjnv+iLc8O9mOS\u002fcKqgq9fZ478riysf\u002f3Xjvz8oabr3Sue\u002fb1KAz9cS5r+OEBDrGRXovyDxtb2oCem\u002fhpnTRF5O5b\u002fOmPsslgbnv73RQ1vHUem\u002fwV98NgZw57+gStg3gFfpvz\u002fRmp6Q9eW\u002fGc4x7rKn5r+0gd5BLvDmv\u002fA3B4aVJOi\u002f4sASg12s4r+BMhxNpqLov4TmAQVZiuS\u002f0AY1XJd+6L9SLNkZfXPkv1yO8kDW2+S\u002fLGLlUep75b94AOVNXUrnv+rjxrlAW+W\u002fRESzx2CQ5b9dcx2e\u002fX\u002fjv48HkPzRWeO\u002f\u002f6obxubp4r\u002fZBNWluxnmvyGIDwhsueW\u002faOx80gW24b\u002fPmArI4mLjvxSjXEuWceO\u002foDbr18Sq5L+awgZoZQziv6zhfWoNBuG\u002fN94Anr7f4r\u002fSe1nVW8Lgv99ZFh2VB+K\u002f4HyQ\u002fAj94b98HHG4yBzfv5gRI3XgRtu\u002fqDp9mo5o2b9GlbmSFungv94sJyr5fNu\u002ficoUzX6d3L+PWT+le6TYv8YETvgGhNW\u002f0ICVvNh6178yE\u002fcPhK7Wv5an0DrvRdS\u002fHnyTdDWx2b\u002fstSBBUHravyeunuTuYNa\u002fSE+zNCuZ2L+hHMQy0v3Yv8+GNxRngtO\u002fQ2UbHKE60b8CZDOGuXDQv9EtCvKuw82\u002fu8mzckqTyb8lBWeNiVvGv4r+yFNHGc2\u002fMKUz8SC\u002fyb80GABIhqm9vzBrqMYFUMi\u002fW5\u002fpo6p\u002fzL+q3Z+FSmq4vwielN\u002ffisO\u002fkJ3vgEFsw78A\u002fnkGpd06v3yt6SQVn7y\u002fYJbe1Z\u002fUrr+w\u002fqxRwKCEP9CcOB5Lope\u002fIGI+twx9sT9h6TvjRRyvvxY8CSRYe7O\u002fsBVCGO9eoD\u002fw6rR9S\u002fu7Pzz4kNEaQLw\u002fXKGiIKuzf7\u002f6igscEmfCP+SvnetBMac\u002fxgmmaYJxqD8OMPiBYjzOP7z9vqbB7sQ\u002fFr9szWdJ0D8ZBM5fB0G8P0X8aL49a8I\u002fgj26zACjwT9D9ogxDkPCP0sK9e6Fb9U\u002fywbg3nis0T\u002fGeADgz33PP98khNgm7NU\u002fbiP1KKlG1z+mscFKf03XP62epEvcENA\u002fzbDIrC5s2z88GqyG8drWP+sUJj73XdM\u002fnp\u002fuQMPT2z+yr7FUsybePxYE6FHkjto\u002fZcIFGsRG4T8uk2WAcw\u002fgP+GDa6yIqeA\u002f1dbdtOvD2T9LO2rKdi3gPwRwf1P4G9w\u002fCSED\u002fktl3j9DbXa0+OnePz7kBUeAoeM\u002fE\u002f4tvgtX4D+FH8LHkabiP3fxFhIW6OE\u002f+ulOpf\u002fy5T8wVzjiXRPlP4CJwkDkkuE\u002fYlpTsv4K5j+6BzpKmLziPzFMK+uS1eU\u002f+cvM2xjQ5j\u002fysreljrrnP8BqnCFinuY\u002fJsHwayEq5T9x5l3nO5TnPzuQjJZNmuc\u002f4Xdrx7nK6D8KRuntpZnoPyazJZvI9uc\u002fnWvgujR06T9ZY3\u002fDQobqP6PeQSH+kOk\u002fq+ZcWF+X6z9s9RHOEubrPyvKtJTKyOc\u002fkCDOYy4k7D\u002fhubLkCQPoPylQRLJnhuk\u002fNwejPQdX7T+uFt3cZP3sP358d1I+jug\u002fjfRLfsY06D8dwvyw5Z\u002fqP3JNJ3gHyOk\u002f6IkRdRYa6z8YdH\u002f5BrvsP075SqjR5uo\u002fgLHKOcJS7z8YdMN+eEPqP6EuFwt\u002fPOw\u002f5MLF3gxA7j\u002fUcJls6BXrP4zq0wjGr+s\u002fjFNDSrKE6T8z3aPe17zqP8IJlGvZ9us\u002f1qLmtIHF7z\u002fcuF\u002fWEuDuPxvnnQCdeu8\u002fNzOISMxO7T8cM7VvE1\u002fsP0V9Lmk4m+8\u002fQyTGiJ0M7T84YbG0TarsPzZX6fgnXu0\u002fpN7Gd4lf7D\u002fpoZArf1zqPxp9SgiLtes\u002fk2d3P3eL6T\u002fSF4j0tvXsP54Pm1v\u002fQus\u002f4xmmpNTR7D+v87xbpCHsP7AB9hzSDek\u002fwlvkQKPj7T+QxwCFB2LpP\u002fmaEZsIk+w\u002fWGdelnJw6T+BIDM4+VztPwOoh89BC+k\u002fIv9IzH1Q6D\u002fqZkQ0dorsP7\u002fQ6kK9muk\u002ftvpYiHb65j8EaxVrfFLqPzSdmqpaTOc\u002fIV5KF7uG5j+fEkt9R6HrP9k4g+iGLOo\u002f8Gw1cNgB6D8qrMeR7aroPyUqqziXsuY\u002fOuCkoiEV5D8HEKyudWzoP1RNgFsddOk\u002fPswaXq1v5T+ADrSUnCDnP+hkVjUac+I\u002fsAEJ1\u002f2i4z9JAPqTYD7mP8mpKDfJAeU\u002fO+DP3RrZ4z\u002fn5sjR0gviP2g2Xb9uIuY\u002fUMeklZi35D8QDd6b\u002fAzhPzo7EPW7z94\u002fP+ghesFv5D+58jNystvcP\u002fxk+gbXP+A\u002fw6MAx4HD3D+46K1hdPvgPzoLnzXbit8\u002fKll5uZPc4D\u002fg6hjGbSnfP7GWo4HP7tU\u002f2HNEAwvS1D9rice4R\u002fzaP75+rEpHMd4\u002fQPYHPtQs2T\u002fmFD2YxfzcP9NYfpk7ZtE\u002f9OH3SKJH2j88O\u002fO0gB\u002fYP\u002fYwcHW7WtI\u002f9vz07+ig1j8P324w6v3IP3JQPiZTBcQ\u002feh4Y1yfr0T8pSmw3gQfCPxI6jMDoA7s\u002f9iPxjPOBzD8y3fC3piS5P94DiYfpMbE\u002fH6zqwXiaxD8qMWGZ5T2hP8oGZ86tVLA\u002ffEeGUCBOsD94UqwRxNZzv9A3eSmm\u002fny\u002fcLKBN3B4Z78QgD7ABBKKv7tEbqKvcrS\u002f4LfDZyv\u002fhb9w0O0NicGvv175GUJzv6i\u002f"},"y":{"dtype":"f8","bdata":"fS562gBBzD8Yw7zxX0XXPxKtDTipENU\u002fXJCOA\u002fqW1j\u002fWUJnVPfvZPwQiDvzErNc\u002fWpbE\u002fr+K2T8IYHwgcNHUP12KO9QjHdI\u002f5gYZT4+C3z+ZCqhsS1vcP4WixJBIcts\u002fILyhnP+I2D+OlW+AUK3XPwmDAknFYdw\u002fIHtTI\u002f4T4D\u002f6EDUOe8vdPyLTI2uefN0\u002fx+gcYLjU4z\u002f798Ao\u002fU3jP79GaiV9l+I\u002f0hd7p2A53z9+t14qjDjhP8RuzrYw9eM\u002fP42wwEfR5T\u002fF5fB3XXvjP8+ivJEduOI\u002fHD\u002fXvI5l4z9vBOwpm6DkP3cxZeEmmuY\u002frfR53A5L5T91mWoHngXlP2y\u002fwl7tbuM\u002f7rDAGLpo5D8Hqwq8GmnpP7RjoeUjuOc\u002fC3cFx\u002fSu5j82C93o7gPoP8KkEoHf0uY\u002fHtCTfHyJ6z+f9\u002fc0vXDnPxoJOadFKew\u002fC5yhIn795z96j\u002fV1HZbnP3aBHkBoTes\u002fzTxkcJKt5z+zt9M+bH3sP616KFwIfeg\u002fepxgW+fa6z+hqPPj8T7sP3YCmtDc5eg\u002f9l7XY+sq7D8GgCVY4I3tPw8msFnabO4\u002fxlXENsAB7j+KlaLMTjfqP5YsPeZA+ek\u002fUOdT6d7h6T\u002feAoSo4GzrP07nxVEEl+w\u002fflqC2EAc7z9rml3biBntP6HKnmbcjO0\u002fcHkJqUEh7D\u002frfsY5m3rtP6ynnjLUjuw\u002fyvYHDk5B6z\u002fHqkD\u002fYenrP3tuzlPke+4\u002fAlPgBkR37D+Ol5WcWZXqP+ZMQduDee8\u002fSUbdheI37T9LowJvvOPvP3QRAauZZe0\u002fHwacReb57j9QWPp\u002fs+DqP3mpAem2quw\u002feoPHn8ak7D9JLylKLN7qPw99jfiZXuo\u002ftB7C43FX7T8sWLHxC0buP9TrnOUQsuk\u002f8jioWf2k7T84M1cjoa3pPyoHei4HMuo\u002fNMyAwY3P6j8E0NBMJlrrP+hHC03vges\u002flqsFkxML7T9UnTlJffvnP7SdPKGLvOg\u002fDkN10Dbj6z8SdFCOqTbpP+ZBnskX3eo\u002fq8or31r75j+g7XEHclrqP7oP9RRBPug\u002fKW15bV5r5z+xA1OTk2LnP3U7Y1Zc2Ok\u002ft3OzK9bh6T9IsMcLPGzoP2G7mSAkLOQ\u002fLaIO1Azw6D+mmut1R2DlP5IGeQzDKOU\u002f9l+NrcZe5T9\u002f5t70rRjnP+gjAc1d1eI\u002fnVr9\u002fSxY4T+YRHp7NVbhP8kZKI7Zx+A\u002fGRxTzuTL4j\u002fq+iyo\u002fRXlP9Hep7\u002fMxuM\u002fbTem6Zyx4D8\u002fDeDW1Y3fP5vpeflYvOA\u002fD9ZoaerA2j9GmVIufRHhPwZCFxEZKOA\u002fwLNEejyg2D9v7SuIwXDXP8RpoFW\u002fj+A\u002fRf+ICWiL1T+8TKnE6RXbPzoCC1TC3Ns\u002fuhne64m+1D9PGguadczRP+DJQYNrk9M\u002f4AQfyoIh1T+qlM\u002fYcJ\u002faP4Kvr\u002f5j6tQ\u002fpJvXoNhG0z9jdb1i1hrLP46orf2m1ss\u002f1IAZ0b2HyD9IGPelkgHSPzRanuIrD8c\u002foB+JyT1Uwj+1mHlZkm7QP5fQbgBEzsw\u002fDG8juU78yz9YY5prb2LHP5bK\u002fj\u002fKsqI\u002fX1F6EhyZwz+LeN7daFO6P6cuzmqrWqE\u002fo4AMBDbdoj+sM7hNpSymvw3zkGLTQ6m\u002fINiNYjuyoj9oHwI5vsGzv2yXz2UH6JO\u002fbAoro7tJrb+MhlHsepC5v6C5aeycv3o\u002f5L0pz6W\u002fpL+o\u002faWPEoaUvxR\u002fHOBovLO\u002fbDQ6tiwVpr85WkM078TKv7TSONXzBLW\u002fmGeTsEt50L9Eq72vy\u002fjJv4Btvw0aLc6\u002fostTk22nxL85gS5XN7LQv2bDxZHj+sa\u002fLcYzsy+B1L+AfHCSpRvKvyKtgFvA7My\u002fapJrXvWf0b\u002fgogqJ4nbTv5Q0KqcgX9u\u002fougIUODR2L8hvDzucDLVv1MMvMp2edK\u002fybqvC7ei1r+aBTYPJDDUv3aW\u002f\u002fXgtdq\u002fApIkZKRR178L3XxwDqDgv9wy1\u002fdz7Na\u002faZCwQ0CN4b\u002fC0Tdsaj3ivw14Za87zuK\u002fpr7MjC874L8ko3XIlwTdv0F8WOwg4OK\u002fkmuckcaJ3r8zluPKbSjjvz2sB2xwROC\u002fq8Vqh2l85L+Ej9zaU5Dgv8XYfU\u002fYwuO\u002fEnmGHYkQ479FVOFVYafkv166E+3hx+W\u002fbTBCm+X347\u002fS6ejDHBjjv7cPNbzzkuO\u002foiotRmlq5L\u002f+x0mTuhTiv1z17H12kua\u002fnH79hQeN47\u002fYZVKzeNbhv6kv36rmmOK\u002f0HmJBWzE5r+yFl3pyCXkv7r3VtQ1Cue\u002fmKOmdGVa57\u002fc1qPmTYzkv\u002fQx4Ovvkui\u002fboPuhePQ479xXZoZOPjmvxdYTB7YnOO\u002f3ZalHNcI57\u002foi3PDvZjkv3CqoKvX2eO\u002fK4srH\u002f91478\u002fKGm690rnv29SgM\u002fXEua\u002fjhAQ6xkV6L8g8bW9qAnpv4aZ00ReTuW\u002fzpj7LJYG57+90UNbx1Hpv8FffDYGcOe\u002foErYN4BX6b8\u002f0ZqekPXlvxnOMe6yp+a\u002ftIHeQS7w5r\u002fwNweGlSTov+LAEoNdrOK\u002fgTIcTaai6L+E5gEFWYrkv9AGNVyXfui\u002fUizZGX1z5L9cjvJA1tvkvyxi5VHqe+W\u002feADlTV1K57\u002fq48a5QFvlv0REs8dgkOW\u002fXXMdnv1\u002f47+PB5D80Vnjv\u002f+qG8bm6eK\u002f2QTVpbsZ5r8hiA8IbLnlv2jsfNIFtuG\u002fz5gKyOJi478Uo1xLlnHjv6A269fEquS\u002fmsIGaGUM4r+s4X1qDQbhvzfeAJ6+3+K\u002f0ntZ1VvC4L\u002ffWRYdlQfiv+B8kPwI\u002feG\u002ffBxxuMgc37+YESN14Ebbv6g6fZqOaNm\u002fRpW5khbp4L\u002feLCcq+Xzbv4nKFM1+ndy\u002fj1k\u002fpXuk2L\u002fGBE74BoTVv9CAlbzYete\u002fMhP3D4Su1r+Wp9A670XUvx58k3Q1sdm\u002f7LUgQVB62r8nrp7k7mDWv0hPszQrmdi\u002foRzEMtL92L\u002fPhjcUZ4LTv0NlGxyhOtG\u002fAmQzhrlw0L\u002fRLQryrsPNv7vJs3JKk8m\u002fJQVnjYlbxr+K\u002fshTRxnNvzClM\u002fEgv8m\u002fNBgASIapvb8wa6jGBVDIv1uf6aOqf8y\u002fqt2fhUpquL8InpTf34rDv5Cd74BBbMO\u002fAP55BqXdOr98rekkFZ+8v2CW3tWf1K6\u002fsP6sUcCghD\u002fQnDgeS6KXvyBiPrcMfbE\u002fYek740Ucr78WPAkkWHuzv7AVQhjvXqA\u002f8Oq0fUv7uz88+JDRGkC8P1yhoiCrs3+\u002f+ooLHBJnwj\u002fkr53rQTGnP8YJpmmCcag\u002fDjD4gWI8zj+8\u002fb6mwe7EPxa\u002fbM1nSdA\u002fGQTOXwdBvD9F\u002fGi+PWvCP4I9uswAo8E\u002fQ\u002faIMQ5Dwj9LCvXuhW\u002fVP8sG4N54rNE\u002fxngA4M99zz\u002ffJITYJuzVP24j9SipRtc\u002fprHBSn9N1z+tnqRL3BDQP82wyKwubNs\u002fPBqshvHa1j\u002frFCY+913TP56f7kDD09s\u002fsq+xVLMm3j8WBOhR5I7aP2XCBRrERuE\u002fLpNlgHMP4D\u002fhg2usiKngP9XW3bTrw9k\u002fSztqynYt4D8EcH9T+BvcPwkhA\u002f5LZd4\u002fQ212tPjp3j8+5AVHgKHjPxP+Lb4LV+A\u002fhR\u002fCx5Gm4j938RYSFujhP\u002frpTqX\u002f8uU\u002fMFc44l0T5T+AicJA5JLhP2JaU7L+CuY\u002fugc6Spi84j8xTCvrktXlP\u002fnLzNsY0OY\u002f8rK3pY665z\u002fAapwhYp7mPybB8GshKuU\u002fceZd5zuU5z87kIyWTZrnP+F3a8e5yug\u002fCkbp7aWZ6D8msyWbyPbnP51r4Lo0dOk\u002fWWN\u002fw0KG6j+j3kEh\u002fpDpP6vmXFhfl+s\u002fbPURzhLm6z8ryrSUysjnP5AgzmMuJOw\u002f4bmy5AkD6D8pUESyZ4bpPzcHoz0HV+0\u002frhbd3GT97D9+fHdSPo7oP430S37GNOg\u002fHcL8sOWf6j9yTSd4B8jpP+iJEXUWGus\u002fGHR\u002f+Qa77D9O+Uqo0ebqP4CxyjnCUu8\u002fGHTDfnhD6j+hLhcLfzzsP+TCxd4MQO4\u002f1HCZbOgV6z+M6tMIxq\u002frP4xTQ0qyhOk\u002fM92j3te86j\u002fCCZRr2fbrP9ai5rSBxe8\u002f3Lhf1hLg7j8b550AnXrvPzcziEjMTu0\u002fHDO1bxNf7D9FfS5pOJvvP0MkxoidDO0\u002fOGGxtE2q7D82V+n4J17tP6TexneJX+w\u002f6aGQK39c6j8afUoIi7XrP5Nndz93i+k\u002f0heI9Lb17D+eD5tb\u002f0LrP+MZpqTU0ew\u002fr\u002fO8W6Qh7D+wAfYc0g3pP8Jb5ECj4+0\u002fkMcAhQdi6T\u002f5mhGbCJPsP1hnXpZycOk\u002fgSAzOPlc7T8DqIfPQQvpPyL\u002fSMx9UOg\u002f6mZENHaK7D+\u002f0OpCvZrpP7b6WIh2+uY\u002fBGsVa3xS6j80nZqqWkznPyFeShe7huY\u002fnxJLfUeh6z\u002fZOIPohizqP\u002fBsNXDYAeg\u002fKqzHke2q6D8lKqs4l7LmPzrgpKIhFeQ\u002fBxCsrnVs6D9UTYBbHXTpPz7MGl6tb+U\u002fgA60lJwg5z\u002foZFY1GnPiP7ABCdf9ouM\u002fSQD6k2A+5j\u002fJqSg3yQHlPzvgz90a2eM\u002f5+bI0dIL4j9oNl2\u002fbiLmP1DHpJWYt+Q\u002fEA3em\u002fwM4T86OxD1u8\u002fePz\u002foIXrBb+Q\u002fufIzcrLb3D\u002f8ZPoG1z\u002fgP8OjAMeBw9w\u002fuOitYXT74D86C58124rfPypZebmT3OA\u002f4OoYxm0p3z+xlqOBz+7VP9hzRAML0tQ\u002fa4nHuEf82j++fqxKRzHeP0D2Bz7ULNk\u002f5hQ9mMX83D\u002fTWH6ZO2bRP\u002fTh90iiR9o\u002fPDvztIAf2D\u002f2MHB1u1rSP\u002fb89O\u002fooNY\u002fD99uMOr9yD9yUD4mUwXEP3oeGNcn69E\u002fKUpsN4EHwj8SOozA6AO7P\u002fYj8Yzzgcw\u002fMt3wt6YkuT\u002feA4mH6TGxPx+s6sF4msQ\u002fKjFhmeU9oT\u002fKBmfOrVSwP3xHhlAgTrA\u002feFKsEcTWc7\u002fQN3kppv58v3CygTdweGe\u002fEIA+wAQSir+7RG6ir3K0v+C3w2cr\u002f4W\u002fcNDtDYnBr79e+RlCc7+ov+D9oVkfqn+\u002fQAGi38xmer\u002fAkDdo3+5lv3QIYhZrQ76\u002fFFfWdtLGwb8u9hsUXjbMvy4eAQipW8+\u002f+ML4Vju+wL8Zx+0gKvjCv+a49K07tcu\u002f"},"z":{"dtype":"f8","bdata":"mQqobEtb3D+FosSQSHLbPyC8oZz\u002fiNg\u002fjpVvgFCt1z8JgwJJxWHcPyB7UyP+E+A\u002f+hA1DnvL3T8i0yNrnnzdP8foHGC41OM\u002f+\u002ffAKP1N4z+\u002fRmolfZfiP9IXe6dgOd8\u002ffrdeKow44T\u002fEbs62MPXjPz+NsMBH0eU\u002fxeXwd1174z\u002fPoryRHbjiPxw\u002f17yOZeM\u002fbwTsKZug5D93MWXhJprmP630edwOS+U\u002fdZlqB54F5T9sv8Je7W7jP+6wwBi6aOQ\u002fB6sKvBpp6T+0Y6HlI7jnPwt3Bcf0ruY\u002fNgvd6O4D6D\u002fCpBKB39LmPx7Qk3x8ies\u002fn\u002ff3NL1w5z8aCTmnRSnsPwucoSJ+\u002fec\u002feo\u002f1dR2W5z92gR5AaE3rP808ZHCSrec\u002fs7fTPmx97D+teihcCH3oP3qcYFvn2us\u002foajz4\u002fE+7D92AprQ3OXoP\u002fZe12PrKuw\u002fBoAlWOCN7T8PJrBZ2mzuP8ZVxDbAAe4\u002fipWizE436j+WLD3mQPnpP1DnU+ne4ek\u002f3gKEqOBs6z9O58VRBJfsP35agthAHO8\u002fa5pd24gZ7T+hyp5m3IztP3B5CalBIew\u002f637GOZt67T+sp54y1I7sP8r2Bw5OQes\u002fx6pA\u002f2Hp6z97bs5T5HvuPwJT4AZEd+w\u002fjpeVnFmV6j\u002fmTEHbg3nvP0lG3YXiN+0\u002fS6MCb7zj7z90EQGrmWXtPx8GnEXm+e4\u002fUFj6f7Pg6j95qQHptqrsP3qDx5\u002fGpOw\u002fSS8pSize6j8PfY34mV7qP7QewuNxV+0\u002fLFix8QtG7j\u002fU65zlELLpP\u002fI4qFn9pO0\u002fODNXI6Gt6T8qB3ouBzLqPzTMgMGNz+o\u002fBNDQTCZa6z\u002foRwtN74HrP5arBZMTC+0\u002fVJ05SX375z+0nTyhi7zoPw5DddA24+s\u002fEnRQjqk26T\u002fmQZ7JF93qP6vKK99a++Y\u002foO1xB3Ja6j+6D\u002fUUQT7oPylteW1ea+c\u002fsQNTk5Ni5z91O2NWXNjpP7dzsyvW4ek\u002fSLDHCzxs6D9hu5kgJCzkPy2iDtQM8Og\u002fpprrdUdg5T+SBnkMwyjlP\u002fZfja3GXuU\u002ff+be9K0Y5z\u002foIwHNXdXiP51a\u002ff0sWOE\u002fmER6ezVW4T\u002fJGSiO2cfgPxkcU87ky+I\u002f6vosqP0V5T\u002fR3qe\u002fzMbjP203pumcseA\u002fPw3g1tWN3z+b6Xn5WLzgPw\u002fWaGnqwNo\u002fRplSLn0R4T8GQhcRGSjgP8CzRHo8oNg\u002fb+0riMFw1z\u002fEaaBVv4\u002fgP0X\u002fiAloi9U\u002fvEypxOkV2z86AgtUwtzbP7oZ3uuJvtQ\u002fTxoLmnXM0T\u002fgyUGDa5PTP+AEH8qCIdU\u002fqpTP2HCf2j+Cr6\u002f+Y+rUP6Sb16DYRtM\u002fY3W9YtYayz+OqK39ptbLP9SAGdG9h8g\u002fSBj3pZIB0j80Wp7iKw\u002fHP6Afick9VMI\u002ftZh5WZJu0D+X0G4ARM7MPwxvI7lO\u002fMs\u002fWGOaa29ixz+Wyv4\u002fyrKiP19RehIcmcM\u002fi3je3WhTuj+nLs5qq1qhP6OADAQ23aI\u002frDO4TaUspr8N85Bi00OpvyDYjWI7sqI\u002faB8COb7Bs79sl89lB+iTv2wKK6O7Sa2\u002fjIZR7HqQub+guWnsnL96P+S9Kc+lv6S\u002fqP2ljxKGlL8UfxzgaLyzv2w0OrYsFaa\u002fOVpDNO\u002fEyr+00jjV8wS1v5hnk7BLedC\u002fRKu9r8v4yb+Abb8NGi3Ov6LLU5Ntp8S\u002fOYEuVzey0L9mw8WR4\u002frGvy3GM7MvgdS\u002fgHxwkqUbyr8irYBbwOzMv2qSa171n9G\u002f4KIKieJ207+UNCqnIF\u002fbv6LoCFDg0di\u002fIbw87nAy1b9TDLzKdnnSv8m6rwu3ota\u002fmgU2DyQw1L92lv\u002f14LXavwKSJGSkUde\u002fC918cA6g4L\u002fcMtf3c+zWv2mQsENAjeG\u002fwtE3bGo94r8NeGWvO87iv6a+zIwvO+C\u002fJKN1yJcE3b9BfFjsIODiv5JrnJHGid6\u002fM5bjym0o4789rAdscETgv6vFaodpfOS\u002fhI\u002fc2lOQ4L\u002fF2H1P2MLjvxJ5hh2JEOO\u002fRVThVWGn5L9euhPt4cflv20wQpvl9+O\u002f0unowxwY47+3DzW885Ljv6IqLUZpauS\u002f\u002fsdJk7oU4r9c9ex9dpLmv5x+\u002fYUHjeO\u002f2GVSs3jW4b+pL9+q5pjiv9B5iQVsxOa\u002fshZd6cgl5L+691bUNQrnv5ijpnRlWue\u002f3Naj5k2M5L\u002f0MeDr75Lov26D7oXj0OO\u002fcV2aGTj45r8XWEwe2Jzjv92WpRzXCOe\u002f6Itzw72Y5L9wqqCr19njvyuLKx\u002f\u002fdeO\u002fPyhpuvdK579vUoDP1xLmv44QEOsZFei\u002fIPG1vagJ6b+GmdNEXk7lv86Y+yyWBue\u002fvdFDW8dR6b\u002fBX3w2BnDnv6BK2DeAV+m\u002fP9GanpD15b8ZzjHusqfmv7SB3kEu8Oa\u002f8DcHhpUk6L\u002fiwBKDXaziv4EyHE2moui\u002fhOYBBVmK5L\u002fQBjVcl37ov1Is2Rl9c+S\u002fXI7yQNbb5L8sYuVR6nvlv3gA5U1dSue\u002f6uPGuUBb5b9ERLPHYJDlv11zHZ79f+O\u002fjweQ\u002fNFZ47\u002f\u002fqhvG5univ9kE1aW7Gea\u002fIYgPCGy55b9o7HzSBbbhv8+YCsjiYuO\u002fFKNcS5Zx47+gNuvXxKrkv5rCBmhlDOK\u002frOF9ag0G4b833gCevt\u002fiv9J7WdVbwuC\u002f31kWHZUH4r\u002fgfJD8CP3hv3wccbjIHN+\u002fmBEjdeBG27+oOn2ajmjZv0aVuZIW6eC\u002f3iwnKvl827+JyhTNfp3cv49ZP6V7pNi\u002fxgRO+AaE1b\u002fQgJW82HrXvzIT9w+Erta\u002flqfQOu9F1L8efJN0NbHZv+y1IEFQetq\u002fJ66e5O5g1r9IT7M0K5nYv6EcxDLS\u002fdi\u002fz4Y3FGeC079DZRscoTrRvwJkM4a5cNC\u002f0S0K8q7Dzb+7ybNySpPJvyUFZ42JW8a\u002fiv7IU0cZzb8wpTPxIL\u002fJvzQYAEiGqb2\u002fMGuoxgVQyL9bn+mjqn\u002fMv6rdn4VKari\u002fCJ6U39+Kw7+Qne+AQWzDvwD+eQal3Tq\u002ffK3pJBWfvL9glt7Vn9Suv7D+rFHAoIQ\u002f0Jw4Hkuil78gYj63DH2xP2HpO+NFHK+\u002fFjwJJFh7s7+wFUIY716gP\u002fDqtH1L+7s\u002fPPiQ0RpAvD9coaIgq7N\u002fv\u002fqKCxwSZ8I\u002f5K+d60Expz\u002fGCaZpgnGoPw4w+IFiPM4\u002fvP2+psHuxD8Wv2zNZ0nQPxkEzl8HQbw\u002fRfxovj1rwj+CPbrMAKPBP0P2iDEOQ8I\u002fSwr17oVv1T\u002fLBuDeeKzRP8Z4AODPfc8\u002f3ySE2Cbs1T9uI\u002fUoqUbXP6axwUp\u002fTdc\u002frZ6kS9wQ0D\u002fNsMisLmzbPzwarIbx2tY\u002f6xQmPvdd0z+en+5Aw9PbP7KvsVSzJt4\u002fFgToUeSO2j9lwgUaxEbhPy6TZYBzD+A\u002f4YNrrIip4D\u002fV1t2068PZP0s7asp2LeA\u002fBHB\u002fU\u002fgb3D8JIQP+S2XeP0NtdrT46d4\u002fPuQFR4Ch4z8T\u002fi2+C1fgP4UfwseRpuI\u002fd\u002fEWEhbo4T\u002f66U6l\u002f\u002fLlPzBXOOJdE+U\u002fgInCQOSS4T9iWlOy\u002fgrmP7oHOkqYvOI\u002fMUwr65LV5T\u002f5y8zbGNDmP\u002fKyt6WOuuc\u002fwGqcIWKe5j8mwfBrISrlP3HmXec7lOc\u002fO5CMlk2a5z\u002fhd2vHucroPwpG6e2lmeg\u002fJrMlm8j25z+da+C6NHTpP1ljf8NChuo\u002fo95BIf6Q6T+r5lxYX5frP2z1Ec4S5us\u002fK8q0lMrI5z+QIM5jLiTsP+G5suQJA+g\u002fKVBEsmeG6T83B6M9B1ftP64W3dxk\u002few\u002ffnx3Uj6O6D+N9Et+xjToPx3C\u002fLDln+o\u002fck0neAfI6T\u002foiRF1FhrrPxh0f\u002fkGu+w\u002fTvlKqNHm6j+Asco5wlLvPxh0w354Q+o\u002foS4XC3887D\u002fkwsXeDEDuP9RwmWzoFes\u002fjOrTCMav6z+MU0NKsoTpPzPdo97XvOo\u002fwgmUa9n26z\u002fWoua0gcXvP9y4X9YS4O4\u002fG+edAJ167z83M4hIzE7tPxwztW8TX+w\u002fRX0uaTib7z9DJMaInQztPzhhsbRNquw\u002fNlfp+Cde7T+k3sZ3iV\u002fsP+mhkCt\u002fXOo\u002fGn1KCIu16z+TZ3c\u002fd4vpP9IXiPS29ew\u002fng+bW\u002f9C6z\u002fjGaak1NHsP6\u002fzvFukIew\u002fsAH2HNIN6T\u002fCW+RAo+PtP5DHAIUHYuk\u002f+ZoRmwiT7D9YZ16WcnDpP4EgMzj5XO0\u002fA6iHz0EL6T8i\u002f0jMfVDoP+pmRDR2iuw\u002fv9DqQr2a6T+2+liIdvrmPwRrFWt8Uuo\u002fNJ2aqlpM5z8hXkoXu4bmP58SS31Hoes\u002f2TiD6IYs6j\u002fwbDVw2AHoPyqsx5Htqug\u002fJSqrOJey5j864KSiIRXkPwcQrK51bOg\u002fVE2AWx106T8+zBperW\u002flP4AOtJScIOc\u002f6GRWNRpz4j+wAQnX\u002faLjP0kA+pNgPuY\u002fyakoN8kB5T874M\u002fdGtnjP+fmyNHSC+I\u002faDZdv24i5j9Qx6SVmLfkPxAN3pv8DOE\u002fOjsQ9bvP3j8\u002f6CF6wW\u002fkP7nyM3Ky29w\u002f\u002fGT6Btc\u002f4D\u002fDowDHgcPcP7jorWF0++A\u002fOgufNduK3z8qWXm5k9zgP+DqGMZtKd8\u002fsZajgc\u002fu1T\u002fYc0QDC9LUP2uJx7hH\u002fNo\u002fvn6sSkcx3j9A9gc+1CzZP+YUPZjF\u002fNw\u002f01h+mTtm0T\u002f04fdIokfaPzw787SAH9g\u002f9jBwdbta0j\u002f2\u002fPTv6KDWPw\u002ffbjDq\u002fcg\u002fclA+JlMFxD96HhjXJ+vRPylKbDeBB8I\u002fEjqMwOgDuz\u002f2I\u002fGM84HMPzLd8LemJLk\u002f3gOJh+kxsT8frOrBeJrEPyoxYZnlPaE\u002fygZnzq1UsD98R4ZQIE6wP3hSrBHE1nO\u002f0Dd5Kab+fL9wsoE3cHhnvxCAPsAEEoq\u002fu0Ruoq9ytL\u002fgt8NnK\u002f+Fv3DQ7Q2Jwa+\u002fXvkZQnO\u002fqL\u002fg\u002faFZH6p\u002fv0ABot\u002fMZnq\u002fwJA3aN\u002fuZb90CGIWa0O+vxRX1nbSxsG\u002fLvYbFF42zL8uHgEIqVvPv\u002fjC+FY7vsC\u002fGcftICr4wr\u002fmuPStO7XLv0ygNl5pR8q\u002fz+52amN4zb90\u002feG73rvNv1ouC+Jz4M6\u002f4Ip+ZJA80b8byUieitjHv3I1ijBBOtW\u002fcMdW2osj1b9pyycCFoXUv0QcNSiidc6\u002f"},"type":"scatter3d"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"bgcolor":"white","angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"ternary":{"bgcolor":"white","aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"white","subunitcolor":"#C8D4E3","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"margin":{"l":0,"r":0,"b":0,"t":60},"title":{"text":"Chmura punktów w 3D (Zaszumiona sinusoida)"},"height":500},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('0219b1ad-e2d3-4551-aa65-9c6e344cb4a4');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-noisy-signal-analysis-2-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(b)
+</figcaption>
+</figure>
+</div>
+<div id="fig-noisy-signal-analysis-3" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-subfloat-fig figure">
+<div aria-describedby="fig-noisy-signal-analysis-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div>            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.5.0.min.js" integrity="sha256-fHbNLP+GlIXN+efbQec78UkemUz3NJp7UmfGxC1tNxs=" crossorigin="anonymous"></script>                <div id="fb0f5eef-70e8-4d13-abf4-249ae652cdca" class="plotly-graph-div" style="height:500px; width:500px;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("fb0f5eef-70e8-4d13-abf4-249ae652cdca")) {                    Plotly.newPlot(                        "fb0f5eef-70e8-4d13-abf4-249ae652cdca",                        [{"hoverinfo":"none","line":{"color":"black","dash":"dash","width":1},"mode":"lines","showlegend":false,"x":[0.031217790618538854,0.36725093849003315],"y":[0.031217790618538854,0.36725093849003315],"type":"scatter"},{"hoverinfo":"text","hovertext":["(0.2559945285320282, 0.26112261414527893)","(0.2427498996257782, 0.2908647060394287)","(0.2181137055158615, 0.31200605630874634)","(0.213585764169693, 0.26343050599098206)","(0.21029627323150635, 0.21499866247177124)","(0.19419248402118683, 0.20378345251083374)","(0.19318127632141113, 0.19559046626091003)","(0.18617573380470276, 0.3112633526325226)","(0.18155835568904877, 0.23202502727508545)","(0.1625618189573288, 0.1731041669845581)","(0.1514582335948944, 0.16241325438022614)","(0.14754067361354828, 0.15471725165843964)","(0.14364668726921082, 0.3607887625694275)","(0.1405797004699707, 0.14585329592227936)","(0.13896258175373077, 0.14651428163051605)","(0.1385437697172165, 0.1468692123889923)","(0.13414786756038666, 0.14715427160263062)","(0.13276858627796173, 0.16243185102939606)","(0.13261495530605316, 0.1584760844707489)","(0.12841230630874634, 0.13747121393680573)","(0.12409364432096481, 0.15083135664463043)","(0.12067068368196487, 0.12152864038944244)","(0.12047675997018814, 0.13088633120059967)","(0.12003027647733688, 0.1642746925354004)","(0.11988406628370285, 0.13088633120059967)","(0.11722204089164734, 0.13386207818984985)","(0.11528053879737854, 0.11826957762241364)","(0.1152036115527153, 0.14863744378089905)","(0.11512430012226105, 0.12877656519412994)","(0.11272691190242767, 0.1297583281993866)","(0.11155687272548676, 0.11560763418674469)","(0.11065918952226639, 0.11346155405044556)","(0.10990118235349655, 0.13460619747638702)","(0.10963725298643112, 0.11072461307048798)","(0.10927176475524902, 0.11844396591186523)","(0.10921598225831985, 0.13624754548072815)","(0.10896642506122589, 0.14061638712882996)","(0.10801996290683746, 0.11986852437257767)","(0.10801265388727188, 0.13690096139907837)","(0.10780216008424759, 0.12110383808612823)","(0.1070399135351181, 0.11257080733776093)","(0.1062132939696312, 0.1298273652791977)","(0.1050952598452568, 0.10709329694509506)","(0.10441756993532181, 0.13582465052604675)","(0.10320192575454712, 0.11659403145313263)","(0.10237196087837219, 0.10815618187189102)","(0.10235072672367096, 0.11471615731716156)","(0.10208556801080704, 0.10886140167713165)","(0.09863346070051193, 0.10898351669311523)","(0.09674040973186493, 0.11976911127567291)","(0.09666556864976883, 0.11457794904708862)","(0.09570207446813583, 0.12033458054065704)","(0.09566886723041534, 0.10739623755216599)","(0.09518064558506012, 0.11138420552015305)","(0.09486951678991318, 0.10777748376131058)","(0.09472248703241348, 0.10196573287248611)","(0.09349953383207321, 0.09625313431024551)","(0.09234394878149033, 0.09299562871456146)","(0.09146330505609512, 0.1080763041973114)","(0.09136771410703659, 0.10184255987405777)","(0.09118608385324478, 0.10279951989650726)","(0.09116972237825394, 0.10799295455217361)","(0.09101345390081406, 0.11788538098335266)","(0.08925800025463104, 0.12377752363681793)","(0.08846206963062286, 0.11886882781982422)","(0.08700857311487198, 0.09133978188037872)","(0.08612431585788727, 0.08883719891309738)","(0.0859905481338501, 0.09387433528900146)","(0.0859331488609314, 0.093712218105793)","(0.08577478677034378, 0.09010108560323715)","(0.0851312130689621, 0.08876767009496689)","(0.08496127277612686, 0.08617251366376877)","(0.08492574095726013, 0.09362014383077621)","(0.08475430309772491, 0.08836634457111359)","(0.08409109711647034, 0.08670511096715927)","(0.08190248161554337, 0.08488669991493225)","(0.08183974027633667, 0.08793659508228302)","(0.0815812200307846, 0.08362074196338654)","(0.08148476481437683, 0.0835099145770073)","(0.08117684721946716, 0.10591967403888702)","(0.08109836280345917, 0.10408379882574081)","(0.08100084215402603, 0.08825654536485672)","(0.07937406003475189, 0.09337645024061203)","(0.07935628294944763, 0.08155541867017746)","(0.07815784215927124, 0.08018286526203156)","(0.0775640532374382, 0.0843990296125412)","(0.07730039954185486, 0.08645002543926239)","(0.07721047103404999, 0.09695830196142197)","(0.07713406533002853, 0.07785282284021378)","(0.07700331509113312, 0.08881723135709763)","(0.07680171728134155, 0.08478432148694992)","(0.07666516304016113, 0.0909547284245491)","(0.07636771351099014, 0.09467193484306335)","(0.07632718235254288, 0.09327708184719086)","(0.07606464624404907, 0.07634226232767105)","(0.07562806457281113, 0.07672402262687683)","(0.07533161342144012, 0.09111598879098892)","(0.07522108405828476, 0.09089578688144684)","(0.07487166672945023, 0.09386178106069565)","(0.07425599545240402, 0.09851423650979996)","(0.07379727810621262, 0.078856460750103)","(0.072997085750103, 0.08623741567134857)","(0.07275284826755524, 0.07292549312114716)","(0.0722733587026596, 0.07771123945713043)","(0.07194752246141434, 0.09785057604312897)","(0.07162328064441681, 0.07305531203746796)","(0.0715024396777153, 0.07338640838861465)","(0.07079840451478958, 0.0786268413066864)","(0.0707332193851471, 0.07074584811925888)","(0.06995407491922379, 0.07317757606506348)","(0.06915279477834702, 0.07406967133283615)","(0.06896141171455383, 0.06910640746355057)","(0.06877569109201431, 0.0744343101978302)","(0.06872262060642242, 0.07595054805278778)","(0.06867652386426926, 0.09237159788608551)","(0.06808014214038849, 0.07292549312114716)","(0.06798458099365234, 0.07683110982179642)","(0.06739269942045212, 0.07218745350837708)","(0.06710222363471985, 0.06741535663604736)","(0.06674934923648834, 0.07087407261133194)","(0.0662510022521019, 0.10000353306531906)","(0.06555846333503723, 0.07343347370624542)","(0.0651431456208229, 0.07542095333337784)","(0.0645928680896759, 0.07264488935470581)","(0.06452519446611404, 0.08670146763324738)","(0.0643562376499176, 0.07111656665802002)","(0.0641317069530487, 0.06730734556913376)","(0.06366614997386932, 0.06439545750617981)","(0.06347120553255081, 0.07540234923362732)","(0.06338785588741302, 0.06494935601949692)","(0.06323515623807907, 0.06600222736597061)","(0.06292004883289337, 0.07802653312683105)","(0.062702976167202, 0.06735420972108841)","(0.06253333389759064, 0.08024664968252182)","(0.06157888472080231, 0.07364996522665024)","(0.06143047288060188, 0.06590490788221359)","(0.06133342161774635, 0.0720287561416626)","(0.0604887455701828, 0.07342478632926941)","(0.06037643551826477, 0.08938448876142502)","(0.06031956151127815, 0.07061558961868286)","(0.05996798351407051, 0.08048729598522186)","(0.05962396040558815, 0.07211598008871078)","(0.05961126089096069, 0.0989828035235405)","(0.05959612503647804, 0.07171857357025146)","(0.05883505940437317, 0.0591764971613884)","(0.05879572778940201, 0.06251143664121628)","(0.05761732533574104, 0.06152739003300667)","(0.05729382857680321, 0.06334880739450455)","(0.055593542754650116, 0.06730734556913376)","(0.05521688237786293, 0.08645228296518326)","(0.054125815629959106, 0.07831963151693344)","(0.05347959324717522, 0.060163188725709915)","(0.053413037210702896, 0.05899563804268837)","(0.052718404680490494, 0.05916477367281914)","(0.051753584295511246, 0.05709691718220711)","(0.05062927305698395, 0.052320558577775955)","(0.05000811442732811, 0.05624007061123848)","(0.049624402076005936, 0.053168077021837234)","(0.04892560839653015, 0.05421791225671768)","(0.048420049250125885, 0.05384799465537071)","(0.046896595507860184, 0.05120217055082321)","(0.04558326303958893, 0.05043821781873703)","(0.042647045105695724, 0.044423412531614304)","(0.04110812023282051, 0.045710038393735886)","(0.03966595232486725, 0.04280608147382736)","(0.037679966539144516, 0.04184558242559433)"],"mode":"markers","name":"H1","x":{"dtype":"f8","bdata":"AAAA4DZi0D8AAADAbRLPPwAAAGAm68s\u002fAAAAQMdWyz8AAAAA\u002ferKPwAAAKBM28g\u002fAAAAACq6yD8AAABAm9THPwAAAOBNPcc\u002fAAAAYNPOxD8AAADA+2LDPwAAAOCc4sI\u002fAAAAwANjwj8AAAAAhP7BPwAAAKCGycE\u002fAAAAYM27wT8AAADgwSvBPwAAAKCP\u002fsA\u002fAAAA4Ib5wD8AAACA0G\u002fAPwAAAOCZxL8\u002fAAAAIEbkvj8AAACgkNe+PwAAAOBNur4\u002fAAAA4Liwvj8AAACAQwK+PwAAAIAGg70\u002fAAAA4Pt9vT8AAABAyXi9PwAAAMCr27w\u002fAAAAwP2OvD8AAAAgKVS8PwAAAOB7Irw\u002fAAAA4C8RvD8AAAAAPPm7PwAAACCU9bs\u002fAAAAQDnluz8AAABAMqe7PwAAAKC3prs\u002fAAAAIOyYuz8AAADA92a7PwAAAGDLMLs\u002fAAAA4IXnuj8AAAAgHLu6PwAAAABxa7o\u002fAAAAgAw1uj8AAABAqDO6PwAAAKBHIro\u002fAAAA4ApAuT8AAADA+sO4PwAAACATv7g\u002fAAAAYO5\u002fuD8AAABAwX24PwAAAEDCXbg\u002fAAAAYF5JuD8AAACguz+4PwAAAOCV77c\u002fAAAAYNqjtz8AAACgI2q3PwAAAODfY7c\u002fAAAAoPhXtz8AAAAg5la3PwAAAGCoTLc\u002fAAAAwJzZtj8AAABAc6W2PwAAAKAxRrY\u002fAAAAQD4Mtj8AAAAAegO2PwAAAAC3\u002f7U\u002fAAAAIFb1tT8AAADAKMu1PwAAAKAFwLU\u002fAAAAgLG9tT8AAABAdbK1PwAAAID+hrU\u002fAAAAoI\u002f3tD8AAAAAc\u002fO0PwAAAMCB4rQ\u002fAAAAgC\u002fctD8AAACAAci0PwAAAMDcwrQ\u002fAAAAoHi8tD8AAADA21G0PwAAAICxULQ\u002fAAAAACcCtD8AAADgPNuzPwAAAID1ybM\u002fAAAAwBDEsz8AAADgDr+zPwAAAEB9trM\u002fAAAAAEepsz8AAAAAVKCzPwAAAKDVjLM\u002fAAAAoC2Ksz8AAAAA+XizPwAAAGBcXLM\u002fAAAAwO5Isz8AAABgsEGzPwAAACDKKrM\u002fAAAA4HACsz8AAADgYOSyPwAAAODvr7I\u002fAAAAQO6fsj8AAADAgYCyPwAAACAna7I\u002fAAAAQOdVsj8AAADg+02yPwAAACDYH7I\u002fAAAAgJIbsj8AAACgguixPwAAAGD\u002fs7E\u002fAAAAgHSnsT8AAACgSJuxPwAAAEDOl7E\u002fAAAA4MiUsT8AAABAs22xPwAAAABwZ7E\u002fAAAA4KVAsT8AAACAnC2xPwAAAEB8FrE\u002fAAAAYNP1sD8AAACAcMiwPwAAAKA4rbA\u002fAAAAgCiJsD8AAAAguYSwPwAAAICmebA\u002fAAAAgO9qsD8AAADAbEywPwAAACCmP7A\u002fAAAAwC86sD8AAADgLTCwPwAAAECHG7A\u002fAAAAYE0NsD8AAABALwKwPwAAAIBEh68\u002fAAAAoNBzrz8AAAAgGGevPwAAAIBh+K4\u002fAAAAAKnprj8AAACgNOKuPwAAAKAftK4\u002fAAAAIAiHrj8AAAAAXoWuPwAAACBig64\u002fAAAAAKEfrj8AAABAeRquPwAAAKAEgK0\u002fAAAA4J1VrT8AAADAwXasPwAAACBjRaw\u002fAAAAAGG2qz8AAABgrWGrPwAAACD0WKs\u002fAAAAIOj9qj8AAAAgcn+qPwAAAIAU7Kk\u002fAAAA4KmaqT8AAACgXmipPwAAAADHDKk\u002fAAAAQIPKqD8AAACg1AKoPwAAAICwVqc\u002fAAAAYNXVpT8AAACgHwylPwAAAIAYT6Q\u002fAAAA4MlKoz8="},"y":{"dtype":"f8","bdata":"AAAAoDu20D8AAAAAh53SPwAAAEDo99M\u002fAAAAoAvc0D8AAACAE4XLPwAAAICTFco\u002fAAAAwBsJyT8AAAAgvevTPwAAAAD\u002fss0\u002fAAAAAEcoxj8AAAAg9cnEPwAAAGDGzcM\u002fAAAAwCkX1z8AAAAgUqvCPwAAAOD6wMI\u002fAAAAQJzMwj8AAACA89XCPwAAACCRysQ\u002fAAAAwPFIxD8AAAAgqJjBPwAAACBxTsM\u002fAAAAQIAcvz8AAAAg4sDAPwAAAAD0BsU\u002fAAAAIOLAwD8AAACAZCLBPwAAAEDqRr4\u002fAAAAQI0Gwz8AAAAgwHvAPwAAAMDrm8A\u002fAAAAQHaYvT8AAAAA0Qu9PwAAAKDGOsE\u002fAAAAwHJYvD8AAAAAWFK+PwAAAECPcME\u002fAAAAwLf\u002fwT8AAAAgtK++PwAAAID4hcE\u002fAAAAQKkAvz8AAADAcNG8PwAAAOAunsA\u002fAAAAYHdquz8AAADAs2LBPwAAAEAb2b0\u002fAAAAoB+wuz8AAADACV69PwAAAEBX3rs\u002fAAAAAFjmuz8AAABAMKm+PwAAAAD7VL0\u002fAAAAQD\u002fOvj8AAADgUX67PwAAAOCsg7w\u002fAAAAIE6Xuz8AAAAgbRq6PwAAAKALpLg\u002fAAAAwI\u002fOtz8AAACA46q7PwAAAKBaEro\u002fAAAAwBFRuj8AAAAgbaW7PwAAAIC8Lb4\u002fAAAAQOKvvz8AAAAAMG6+PwAAAEALYrc\u002fAAAA4Ai+tj8AAAAAJgi4PwAAACCG\u002fbc\u002fAAAAYN0Qtz8AAABgerm2PwAAAOBmD7Y\u002fAAAAYH33tz8AAABALZ+2PwAAAGBOMrY\u002fAAAAgCK7tT8AAABAA4O2PwAAAEAraLU\u002fAAAA4OdgtT8AAABAjR27PwAAAGA8pbo\u002fAAAAIPuXtj8AAADghOe3PwAAAODQ4LQ\u002fAAAAQN2GtD8AAADALJu1PwAAAMCWIbY\u002fAAAAYELSuD8AAACgKe6zPwAAAOC5vLY\u002fAAAA4Gy0tT8AAAAgz0i3PwAAAIBrPLg\u002fAAAAwAHhtz8AAACgKouzPwAAAIAvpLM\u002fAAAAoGBTtz8AAABA8kS3PwAAAGBTB7g\u002fAAAAoDo4uT8AAADg7y+0PwAAAMCnE7Y\u002fAAAAwD6rsj8AAABA4uSzPwAAAEC8DLk\u002fAAAAwMCzsj8AAACgc8myPwAAAIDjILQ\u002fAAAAYGYcsj8AAAAAxLuyPwAAAOA69rI\u002fAAAAIPWwsT8AAACAIA6zPwAAAMB+cbM\u002fAAAAQKqltz8AAADAPquyPwAAACA0q7M\u002fAAAAgOB6sj8AAAAAIkKxPwAAAKDNJLI\u002fAAAA4NSZuT8AAABAicyyPwAAAKDJTrM\u002fAAAAANuYsj8AAABAETK2PwAAAACyNLI\u002fAAAA4A07sT8AAACAOHywPwAAAICRTbM\u002fAAAAYIWgsD8AAACgheWwPwAAAACM+bM\u002fAAAAICA+sT8AAABgC4u0PwAAAGC52rI\u002fAAAA4CTfsD8AAAAAenCyPwAAAID3y7I\u002fAAAA4Obhtj8AAAAA3ROyPwAAAMDQmrQ\u002fAAAAYDF2sj8AAADg71a5PwAAAAAmXLI\u002fAAAAwGFMrj8AAADgvwCwPwAAAKCEgK8\u002fAAAAoKA3sD8AAADgDTuxPwAAAKC8IbY\u002fAAAAYMEMtD8AAACgtc2uPwAAACCtNK4\u002fAAAAYNhKrj8AAACgzjutPwAAAKDCyao\u002fAAAAoH\u002fLrD8AAACg2DirPwAAAEBzwqs\u002fAAAA4PaRqz8AAADAKzeqPwAAAMAJ06k\u002fAAAAYKq+pj8AAABgTmenPwAAAMCt6qU\u002fAAAAwMhspT8="},"type":"scatter"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"bgcolor":"white","angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"ternary":{"bgcolor":"white","aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"white","subunitcolor":"#C8D4E3","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"xaxis":{"title":{"text":"Birth"},"side":"bottom","type":"linear","range":[0.031217790618538854,0.36725093849003315],"autorange":false,"ticks":"outside","showline":true,"zeroline":true,"linewidth":1,"linecolor":"black","mirror":false,"showexponent":"all","exponentformat":"e"},"yaxis":{"title":{"text":"Death"},"side":"left","type":"linear","range":[0.031217790618538854,0.36725093849003315],"autorange":false,"scaleanchor":"x","scaleratio":1,"ticks":"outside","showline":true,"zeroline":true,"linewidth":1,"linecolor":"black","mirror":false,"showexponent":"all","exponentformat":"e"},"width":500,"height":500,"plot_bgcolor":"white","title":{"text":"Diagram Persystencji (Zaszumiona sinusoida)"}},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('fb0f5eef-70e8-4d13-abf4-249ae652cdca');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-subfloat-caption quarto-subfloat-fig" id="fig-noisy-signal-analysis-3-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+(c)
+</figcaption>
+</figure>
+</div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig quarto-uncaptioned" id="fig-noisy-signal-analysis-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;4
+</figcaption>
+</figure>
+</div>
+</div>
+</section>
+<section id="analiza-krocząca-i-reguły-decyzyjne" class="level1">
+<h1>Analiza krocząca i Reguły Decyzyjne</h1>
+<p>W rzeczywistym systemie monitoringu musimy ustalić próg (threshold), którego przekroczenie oznacza alarm.</p>
+<div id="cell-fig-entropy-threshold" class="cell" data-execution_count="7">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb10"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Podział sygnału zaszumionego na okna</span></span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>windows <span class="op">=</span> mixed_signal.reshape(<span class="dv">5</span>, <span class="dv">100</span>)</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>pipeline <span class="op">=</span> Pipeline([</span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'embedding'</span>, TakensEmbedding(time_delay<span class="op">=</span><span class="dv">3</span>, dimension<span class="op">=</span><span class="dv">3</span>)),</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'persistence'</span>, VietorisRipsPersistence(homology_dimensions<span class="op">=</span>[<span class="dv">1</span>])),</span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>    (<span class="st">'entropy'</span>, PersistenceEntropy())</span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>])</span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>window_entropies <span class="op">=</span> pipeline.fit_transform(windows)</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a><span class="co"># Wyznaczmy próg (np. na podstawie średniej z pierwszych okien + 2*odchylenie)</span></span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a><span class="co"># Tu dla przykładu ustalimy go sztywno na 7.0</span></span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>THRESHOLD <span class="op">=</span> <span class="fl">7.0</span></span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>plt.plot(window_entropies.squeeze(), marker<span class="op">=</span><span class="st">'o'</span>, linestyle<span class="op">=</span><span class="st">'--'</span>, color<span class="op">=</span>COLOR_MIXED, label<span class="op">=</span><span class="st">"Aktualna Entropia"</span>)</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>plt.axhline(y<span class="op">=</span>THRESHOLD, color<span class="op">=</span>COLOR_ANOMALY, linestyle<span class="op">=</span><span class="st">':'</span>, label<span class="op">=</span><span class="st">"Próg Alarmowy"</span>)</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Monitoring entropii w czasie"</span>)</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Numer okna"</span>)</span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Entropia"</span>)</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>plt.ylim(<span class="dv">0</span>, <span class="dv">10</span>)</span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-entropy-threshold" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-entropy-threshold-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="main_files/figure-html/fig-entropy-threshold-output-1.png" width="692" height="400" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-entropy-threshold-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;5: Monitorowanie entropii z wyznaczonym progiem alarmowym
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+<section id="eksperyment-wykrywanie-narastającej-awarii" class="level1">
+<h1>Eksperyment: Wykrywanie narastającej awarii</h1>
+<p>Symulujemy stopniowy wzrost szumu. Zobaczymy, w którym momencie system przekroczy próg bezpieczeństwa oraz jak wizualnie rozpada się struktura geometryczna sygnału.</p>
+<div id="cell-fig-evolving-degradation-signal" class="cell" data-execution_count="8">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb11"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb11-1"><a href="#cb11-1" aria-hidden="true" tabindex="-1"></a>evolving_noise <span class="op">=</span> np.linspace(<span class="dv">0</span>, <span class="dv">5</span>, <span class="dv">500</span>) <span class="op">*</span> np.random.rand(<span class="dv">500</span>)</span>
+<span id="cb11-2"><a href="#cb11-2" aria-hidden="true" tabindex="-1"></a>mixed_signal_evolving <span class="op">=</span> np.sin(t) <span class="op">+</span> evolving_noise</span>
+<span id="cb11-3"><a href="#cb11-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb11-4"><a href="#cb11-4" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
+<span id="cb11-5"><a href="#cb11-5" aria-hidden="true" tabindex="-1"></a>plt.plot(mixed_signal_evolving, color<span class="op">=</span>COLOR_ANOMALY)</span>
+<span id="cb11-6"><a href="#cb11-6" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"Sygnał z narastającym szumem (Czas)"</span>)</span>
+<span id="cb11-7"><a href="#cb11-7" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Czas"</span>)</span>
+<span id="cb11-8"><a href="#cb11-8" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Amplituda"</span>)</span>
+<span id="cb11-9"><a href="#cb11-9" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-evolving-degradation-signal" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-evolving-degradation-signal-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="main_files/figure-html/fig-evolving-degradation-signal-output-1.png" width="695" height="400" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-evolving-degradation-signal-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;6: Sygnał ulegający stopniowej degradacji (Symulacja awarii)
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+<div id="cell-fig-evolving-degradation-3d" class="cell" data-execution_count="9">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb12"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Przekształcenie całego ewoluującego sygnału w 3D</span></span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>evolving_3d <span class="op">=</span> TE.fit_transform(mixed_signal_evolving.reshape(<span class="dv">1</span>, <span class="op">-</span><span class="dv">1</span>))</span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>fig_evolving_3d <span class="op">=</span> go.Figure(data<span class="op">=</span>[go.Scatter3d(</span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>    x<span class="op">=</span>evolving_3d[<span class="dv">0</span>,:,<span class="dv">0</span>], y<span class="op">=</span>evolving_3d[<span class="dv">0</span>,:,<span class="dv">1</span>], z<span class="op">=</span>evolving_3d[<span class="dv">0</span>,:,<span class="dv">2</span>],</span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    mode<span class="op">=</span><span class="st">'markers'</span>, </span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    marker<span class="op">=</span><span class="bu">dict</span>(</span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>        size<span class="op">=</span><span class="dv">3</span>, </span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>        color<span class="op">=</span>np.linspace(<span class="dv">0</span>, <span class="dv">1</span>, <span class="bu">len</span>(evolving_3d[<span class="dv">0</span>])), <span class="co"># Kolor zależny od czasu</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>        colorscale<span class="op">=</span><span class="st">'Reds'</span>,</span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>        opacity<span class="op">=</span><span class="fl">0.7</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    )</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>)])</span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>fig_evolving_3d.update_layout(</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>    title<span class="op">=</span><span class="st">"Chmura punktów 3D - Narastająca degradacja (Kolor = Czas)"</span>, </span>
+<span id="cb12-16"><a href="#cb12-16" aria-hidden="true" tabindex="-1"></a>    height<span class="op">=</span>PLOTLY_HEIGHT, </span>
+<span id="cb12-17"><a href="#cb12-17" aria-hidden="true" tabindex="-1"></a>    margin<span class="op">=</span><span class="bu">dict</span>(l<span class="op">=</span><span class="dv">0</span>, r<span class="op">=</span><span class="dv">0</span>, b<span class="op">=</span><span class="dv">0</span>, t<span class="op">=</span><span class="dv">60</span>)</span>
+<span id="cb12-18"><a href="#cb12-18" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb12-19"><a href="#cb12-19" aria-hidden="true" tabindex="-1"></a>fig_evolving_3d.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div id="fig-evolving-degradation-3d" class="cell-output cell-output-display quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-evolving-degradation-3d-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<div>            <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-AMS-MML_SVG"></script><script>if (window.MathJax && window.MathJax.Hub && window.MathJax.Hub.Config) {window.MathJax.Hub.Config({SVG: {font: "STIX-Web"}});}</script>                <script>window.PlotlyConfig = {MathJaxConfig: 'local'};</script>
+        <script charset="utf-8" src="https://cdn.plot.ly/plotly-3.5.0.min.js" integrity="sha256-fHbNLP+GlIXN+efbQec78UkemUz3NJp7UmfGxC1tNxs=" crossorigin="anonymous"></script>                <div id="77aa1df4-673c-42ac-b583-949dd87a0dd9" class="plotly-graph-div" style="height:500px; width:100%;"></div>            <script>                window.PLOTLYENV=window.PLOTLYENV || {};                                if (document.getElementById("77aa1df4-673c-42ac-b583-949dd87a0dd9")) {                    Plotly.newPlot(                        "77aa1df4-673c-42ac-b583-949dd87a0dd9",                        [{"marker":{"color":{"dtype":"f8","bdata":"AAAAAAAAAAAmSKcZMBphPyZIpxkwGnE\u002fOex6JkineT8mSKcZMBqBPzAaESC8YIU\u002fOex6JkiniT9CvuQs1O2NPyZIpxkwGpE\u002fKzHcHHY9kz8wGhEgvGCVPzQDRiMChJc\u002fOex6JkinmT8+1a8pjsqbP0K+5CzU7Z0\u002fpNMMGI0IoD8mSKcZMBqhP6i8QRvTK6I\u002fKzHcHHY9oz+tpXYeGU+kPzAaESC8YKU\u002fso6rIV9ypj80A0YjAoSnP7d34CSllag\u002fOex6JkinqT+7YBUo67iqPz7VrymOyqs\u002fwElKKzHcrD9CvuQs1O2tP8Uyfy53\u002f64\u002fpNMMGI0IsD\u002flDdqYXpGwPyZIpxkwGrE\u002fZ4J0mgGjsT+ovEEb0yuyP+r2DpyktLI\u002fKzHcHHY9sz9sa6mdR8azP62ldh4ZT7Q\u002f7t9Dn+rXtD8wGhEgvGC1P3FU3qCN6bU\u002fso6rIV9ytj\u002fzyHiiMPu2PzQDRiMChLc\u002fdT0TpNMMuD+3d+AkpZW4P\u002fixraV2Hrk\u002fOex6JkinuT96JkinGTC6P7tgFSjruLo\u002f\u002fZriqLxBuz8+1a8pjsq7P38PfapfU7w\u002fwElKKzHcvD8BhBesAmW9P0K+5CzU7b0\u002fhPixraV2vj\u002fFMn8ud\u002f++PwZtTK9IiL8\u002fpNMMGI0IwD\u002fEcHPY9UzAP+UN2phekcA\u002fBatAWcfVwD8mSKcZMBrBP0flDdqYXsE\u002fZ4J0mgGjwT+IH9taaufBP6i8QRvTK8I\u002fyVmo2ztwwj\u002fq9g6cpLTCPwqUdVwN+cI\u002fKzHcHHY9wz9LzkLd3oHDP2xrqZ1HxsM\u002fjQgQXrAKxD+tpXYeGU\u002fEP85C3d6Bk8Q\u002f7t9Dn+rXxD8PfapfUxzFPzAaESC8YMU\u002fULd34CSlxT9xVN6gjenFP5HxRGH2LcY\u002fso6rIV9yxj\u002fSKxLix7bGP\u002fPIeKIw+8Y\u002fFGbfYpk\u002fxz80A0YjAoTHP1WgrONqyMc\u002fdT0TpNMMyD+W2nlkPFHIP7d34CSllcg\u002f1xRH5Q3ayD\u002f4sa2ldh7JPxhPFGbfYsk\u002fOex6JkinyT9aieHmsOvJP3omSKcZMMo\u002fm8OuZ4J0yj+7YBUo67jKP9z9e+hT\u002fco\u002f\u002fZriqLxByz8dOElpJYbLPz7VrymOyss\u002fXnIW6vYOzD9\u002fD32qX1PMP6Cs42rIl8w\u002fwElKKzHczD\u002fh5rDrmSDNPwGEF6wCZc0\u002fIiF+bGupzT9CvuQs1O3NP2NbS+08Ms4\u002fhPixraV2zj+klRhuDrvOP8Uyfy53\u002f84\u002f5c\u002fl7t9Dzz8GbUyvSIjPPycKs2+xzM8\u002fpNMMGI0I0D80IkB4wSrQP8Rwc9j1TNA\u002fVb+mOCpv0D\u002flDdqYXpHQP3VcDfmSs9A\u002fBatAWcfV0D+W+XO5+\u002ffQPyZIpxkwGtE\u002ftpbaeWQ80T9H5Q3amF7RP9czQTrNgNE\u002fZ4J0mgGj0T\u002f30Kf6NcXRP4gf21pq59E\u002fGG4Ou54J0j+ovEEb0yvSPzkLdXsHTtI\u002fyVmo2ztw0j9ZqNs7cJLSP+r2DpyktNI\u002fekVC\u002fNjW0j8KlHVcDfnSP5riqLxBG9M\u002fKzHcHHY90z+7fw99ql\u002fTP0vOQt3egdM\u002f3Bx2PROk0z9sa6mdR8bTP\u002fy53P176NM\u002fjQgQXrAK1D8dV0O+5CzUP62ldh4ZT9Q\u002fPfSpfk1x1D\u002fOQt3egZPUP16RED+2tdQ\u002f7t9Dn+rX1D9\u002fLnf\u002fHvrUPw99ql9THNU\u002fn8vdv4c+1T8wGhEgvGDVP8BoRIDwgtU\u002fULd34CSl1T\u002fgBatAWcfVP3FU3qCN6dU\u002fAaMRAcIL1j+R8URh9i3WPyJAeMEqUNY\u002fso6rIV9y1j9C3d6Bk5TWP9IrEuLHttY\u002fY3pFQvzY1j\u002fzyHiiMPvWP4MXrAJlHdc\u002fFGbfYpk\u002f1z+ktBLDzWHXPzQDRiMChNc\u002fxVF5gzam1z9VoKzjasjXP+Xu30Of6tc\u002fdT0TpNMM2D8GjEYECC\u002fYP5baeWQ8Udg\u002fJimtxHBz2D+3d+AkpZXYP0fGE4XZt9g\u002f1xRH5Q3a2D9oY3pFQvzYP\u002fixraV2Htk\u002fiADhBatA2T8YTxRm32LZP6mdR8YThdk\u002fOex6Jkin2T\u002fJOq6GfMnZP1qJ4eaw69k\u002f6tcUR+UN2j96JkinGTDaPwp1ewdOUto\u002fm8OuZ4J02j8rEuLHtpbaP7tgFSjruNo\u002fTK9IiB\u002fb2j\u002fc\u002fXvoU\u002f3aP2xMr0iIH9s\u002f\u002fZriqLxB2z+N6RUJ8WPbPx04SWklhts\u002frYZ8yVmo2z8+1a8pjsrbP84j44nC7Ns\u002fXnIW6vYO3D\u002fvwElKKzHcP38PfapfU9w\u002fD16wCpR13D+grONqyJfcPzD7Fsv8udw\u002fwElKKzHc3D9QmH2LZf7cP+HmsOuZIN0\u002fcTXkS85C3T8BhBesAmXdP5LSSgw3h90\u002fIiF+bGup3T+yb7HMn8vdP0K+5CzU7d0\u002f0wwYjQgQ3j9jW0vtPDLeP\u002fOpfk1xVN4\u002fhPixraV23j8UR+UN2pjeP6SVGG4Ou94\u002fNeRLzkLd3j\u002fFMn8ud\u002f\u002feP1WBso6rId8\u002f5c\u002fl7t9D3z92HhlPFGbfPwZtTK9IiN8\u002flrt\u002fD32q3z8nCrNvsczfP7dY5s\u002fl7t8\u002fpNMMGI0I4D\u002fseiZIpxngPzQiQHjBKuA\u002ffMlZqNs74D\u002fEcHPY9UzgPwwYjQgQXuA\u002fVb+mOCpv4D+dZsBoRIDgP+UN2phekeA\u002fLbXzyHii4D91XA35krPgP70DJymtxOA\u002fBatAWcfV4D9OUlqJ4ebgP5b5c7n79+A\u002f3qCN6RUJ4T8mSKcZMBrhP27vwElKK+E\u002ftpbaeWQ84T\u002f+PfSpfk3hP0flDdqYXuE\u002fj4wnCrNv4T\u002fXM0E6zYDhPx\u002fbWmrnkeE\u002fZ4J0mgGj4T+vKY7KG7ThP\u002ffQp\u002fo1xeE\u002fQHjBKlDW4T+IH9taaufhP9DG9IqE+OE\u002fGG4Ou54J4j9gFSjruBriP6i8QRvTK+I\u002f8WNbS+084j85C3V7B07iP4GyjqshX+I\u002fyVmo2ztw4j8RAcILVoHiP1mo2ztwkuI\u002foU\u002f1a4qj4j\u002fq9g6cpLTiPzKeKMy+xeI\u002fekVC\u002fNjW4j\u002fC7Fss8+fiPwqUdVwN+eI\u002fUjuPjCcK4z+a4qi8QRvjP+OJwuxbLOM\u002fKzHcHHY94z9z2PVMkE7jP7t\u002fD32qX+M\u002fAycprcRw4z9LzkLd3oHjP5N1XA35kuM\u002f3Bx2PROk4z8kxI9tLbXjP2xrqZ1HxuM\u002ftBLDzWHX4z\u002f8udz9e+jjP0Rh9i2W+eM\u002fjQgQXrAK5D\u002fVrymOyhvkPx1XQ77kLOQ\u002fZf5c7v495D+tpXYeGU\u002fkP\u002fVMkE4zYOQ\u002fPfSpfk1x5D+Gm8OuZ4LkP85C3d6Bk+Q\u002fFur2Dpyk5D9ekRA\u002ftrXkP6Y4Km\u002fQxuQ\u002f7t9Dn+rX5D82h13PBOnkP38ud\u002f8e+uQ\u002fx9WQLzkL5T8PfapfUxzlP1ckxI9tLeU\u002fn8vdv4c+5T\u002fncvfvoU\u002flPzAaESC8YOU\u002feMEqUNZx5T\u002fAaESA8ILlPwgQXrAKlOU\u002fULd34CSl5T+YXpEQP7blP+AFq0BZx+U\u002fKa3EcHPY5T9xVN6gjenlP7n799Cn+uU\u002fAaMRAcIL5j9JSisx3BzmP5HxRGH2LeY\u002f2ZhekRA\u002f5j8iQHjBKlDmP2rnkfFEYeY\u002fso6rIV9y5j\u002f6NcVReYPmP0Ld3oGTlOY\u002fioT4sa2l5j\u002fSKxLix7bmPxvTKxLix+Y\u002fY3pFQvzY5j+rIV9yFurmP\u002fPIeKIw++Y\u002fO3CS0koM5z+DF6wCZR3nP8y+xTJ\u002fLuc\u002fFGbfYpk\u002f5z9cDfmSs1DnP6S0EsPNYec\u002f7Fss8+dy5z80A0YjAoTnP3yqX1Mclec\u002fxVF5gzam5z8N+ZKzULfnP1WgrONqyOc\u002fnUfGE4XZ5z\u002fl7t9Dn+rnPy2W+XO5++c\u002fdT0TpNMM6D++5CzU7R3oPwaMRgQIL+g\u002fTjNgNCJA6D+W2nlkPFHoP96Bk5RWYug\u002fJimtxHBz6D9u0Mb0ioToP7d34CSlleg\u002f\u002fx76VL+m6D9HxhOF2bfoP49tLbXzyOg\u002f1xRH5Q3a6D8fvGAVKOvoP2hjekVC\u002fOg\u002fsAqUdVwN6T\u002f4sa2ldh7pP0BZx9WQL+k\u002fiADhBatA6T\u002fQp\u002fo1xVHpPxhPFGbfYuk\u002fYfYtlvlz6T+pnUfGE4XpP\u002fFEYfYtluk\u002fOex6Jkin6T+Bk5RWYrjpP8k6roZ8yek\u002fEeLHtpba6T9aieHmsOvpP6Iw+xbL\u002fOk\u002f6tcUR+UN6j8yfy53\u002fx7qP3omSKcZMOo\u002fws1h1zNB6j8KdXsHTlLqP1MclTdoY+o\u002fm8OuZ4J06j\u002fjasiXnIXqPysS4se2luo\u002fc7n799Cn6j+7YBUo67jqPwQIL1gFyuo\u002fTK9IiB\u002fb6j+UVmK4OezqP9z9e+hT\u002feo\u002fJKWVGG4O6z9sTK9IiB\u002frP7TzyHiiMOs\u002f\u002fZriqLxB6z9FQvzY1lLrP43pFQnxY+s\u002f1ZAvOQt16z8dOElpJYbrP2XfYpk\u002fl+s\u002frYZ8yVmo6z\u002f2LZb5c7nrPz7VrymOyus\u002fhnzJWajb6z\u002fOI+OJwuzrPxbL\u002fLnc\u002fes\u002fXnIW6vYO7D+mGTAaESDsP+\u002fASUorMew\u002fN2hjekVC7D9\u002fD32qX1PsP8e2ltp5ZOw\u002fD16wCpR17D9XBco6robsP6Cs42rIl+w\u002f6FP9muKo7D8w+xbL\u002fLnsP3iiMPsWy+w\u002fwElKKzHc7D8I8WNbS+3sP1CYfYtl\u002fuw\u002fmT+Xu38P7T\u002fh5rDrmSDtPymOyhu0Me0\u002fcTXkS85C7T+53P176FPtPwGEF6wCZe0\u002fSSsx3Bx27T+S0koMN4ftP9p5ZDxRmO0\u002fIiF+bGup7T9qyJechbrtP7Jvscyfy+0\u002f+hbL\u002fLnc7T9CvuQs1O3tP4tl\u002flzu\u002fu0\u002f0wwYjQgQ7j8btDG9IiHuP2NbS+08Mu4\u002fqwJlHVdD7j\u002fzqX5NcVTuPzxRmH2LZe4\u002fhPixraV27j\u002fMn8vdv4fuPxRH5Q3amO4\u002fXO7+PfSp7j+klRhuDrvuP+w8Mp4ozO4\u002fNeRLzkLd7j99i2X+XO7uP8Uyfy53\u002f+4\u002fDdqYXpEQ7z9VgbKOqyHvP50ozL7FMu8\u002f5c\u002fl7t9D7z8ud\u002f8e+lTvP3YeGU8UZu8\u002fvsUyfy537z8GbUyvSIjvP04UZt9ime8\u002flrt\u002fD32q7z\u002ffYpk\u002fl7vvPycKs2+xzO8\u002fb7HMn8vd7z+3WObP5e7vPwAAAAAAAPA\u002f"},"colorscale":[[0.0,"rgb(255,245,240)"],[0.125,"rgb(254,224,210)"],[0.25,"rgb(252,187,161)"],[0.375,"rgb(252,146,114)"],[0.5,"rgb(251,106,74)"],[0.625,"rgb(239,59,44)"],[0.75,"rgb(203,24,29)"],[0.875,"rgb(165,15,21)"],[1.0,"rgb(103,0,13)"]],"opacity":0.7,"size":3},"mode":"markers","x":{"dtype":"f8","bdata":"AAAAAAAAAAA4gATZsmGWP+w0Sbmm8ak\u002fLYrioob8sD+af1wXkfm1Px2DkpOoHMM\u002fa7WypZMHwz8TDlHyJnXIP9zIUGQnD8U\u002f\u002f065dS3lzT9Ke9a0A5nSP420YUjIVNE\u002fS2tbap060z+OmX\u002f+vV7UP7ueAz1eutk\u002fgmuwuKF83D+ur5tHpLDXP8bsGlZMVtg\u002fNH89TWOo1z9sjjzUxercPzbXofTzVOE\u002f7lbKvOzs2j8Eb\u002fyY53DiP8r00l95puI\u002fOG91PcH05D8wKsf8A13mPzNopvYBCuM\u002f4Q+qpCop4j\u002fIB+0DkJ7jP9T9iESOdeQ\u002fbra7Sl1F6j9ubkEidArlP7G50zvwuuo\u002fBAl9gN1n6z+g0111JM7uP4YhUsG39uw\u002fjRMX8VDP6D8f3u5KHUTrP4QtyVlpZe8\u002fkE1pBzWx7T+\u002fcMIH0dnwP9D5pNhLRew\u002f3CnMAoYQ6j+xrehMS9HxP32vDZ7bdus\u002fVqoEuXdJ7D+rso6tM3\u002fuP\u002f+x0tKOm+8\u002fuoTkUUZy8j\u002fpEfj0T+zsP0CL93xKAe4\u002flnNqSTC07D\u002fpSu7vek7sP4KmMZF5Pu0\u002f9IFlU07b7T8DlYxcHyPyP7Pb8GY5sfA\u002ftFV0N3W19T+AIX7HfRbxP9THAFQztfQ\u002fNiJzN5FQ8j\u002fu+IEN1kv4PzrMHPYgBPk\u002fsHlEkBs59T+iCyUJWFf2P2ziofr18Pg\u002fOoPzs6+W+D939C+MHyLwPwT4JCwTSvA\u002f5mivx7mi7z9uohbyxOH4Py3rV886\u002f\u002fU\u002f8rqiNElN8j+qZjoNg\u002fjxP\u002fzG9zZGSPE\u002f5AzVtbno9z8aPbsm6LX7P65DN3nUkfs\u002f7imbklWU+D+kFATkE5z0P1qisnkcxPo\u002f6CWuTxPV+T8BpN8sRUzyP1o9CsJ9UPY\u002fqjHaagIB+D+KzQ9VRobwPwb1MPNsO\u002fs\u002fkOrcRH+r9z+MuHjg0ILwPzjmBmN6h\u002fg\u002fZ5QNod0I8D\u002fmvrZgpt\u002fxPyFVU8SsI\u002fM\u002fWXTCaUXx9j\u002fi998od7b9P4Yy7\u002fCk7\u002fs\u002fiLD\u002fuFBt\u002fD+fsjTlRIXwP9Kkv9WE7Po\u002fhg7GA\u002fAo8D\u002fnvLD7CDP3P2L28CkpiP4\u002f\u002fhII\u002fsJZ+j92qC6+\u002fCb4P2V3CI\u002f5VO0\u002fWNb2QzbL+D8TbWTOLrz0P5NCiGUUjvI\u002fkv50\u002fu+z6j\u002f6Y4oy6nH1P01dDRg4Gew\u002f3zBO9AX86T9tRmu5H\u002f39P7gLsqmiPfM\u002fxRviI7sO9D8gKOMpEL3oP27kNAkz+v0\u002fUIw6EDT28D\u002f9LRligH\u002f0P\u002feAl27kfP0\u002fDNfP\u002fjaN9j+4P\u002fX84vDrPykMQeTmUeY\u002fYU2154fT6T8SFEHqXOPuP8orSEL2M\u002fE\u002fXCeOhtoU6j8uiqt\u002fiCf7P3LSWuWHSvw\u002faCsvps6W7D\u002fcTO8wKvrzPzw8++JmmOQ\u002fR5mEPjkU4j9Htt1lxJroP0R4PsEKr\u002fU\u002fjhx+aqcy6j+feoN1s9byPxaGmDTlYPk\u002f5kjQueV32T+u8UPS7BrvPwImLpBtofo\u002fIhFf391H5T9n+8yx7YrvP7zOZ+jU\u002fvE\u002fUjY3cKPS+D9QNHa7mQvePwwKqhSXM\u002fg\u002f2riSFkqu8D9RWXfgOajTP\u002fdAyeNXl\u002fQ\u002fLYWzVgdA6j92\u002fLq+lrfyP6NXUCgabvE\u002fASkMa+GP8T8OsgciW7LPP788SSgOTfc\u002fSEvcnA1+6z+FIUEykbfhP\u002fVhETmYPu4\u002fsL67Fjkm6j+JBc5leKbaP42\u002fg6aXf9Q\u002fP6VDm1qs4j8wyBJyMgzAP4mfWfgtFdI\u002f2H3VB5Cgpz+wH53mHanoPwShhPc5v+k\u002fOAaEtXZdoD8kdVqoLOviP+y6XFqgC+M\u002f9uYdaA3o9D+or9f1kNzNPxxzFYIzYMU\u002foGc1xJUC9j85SZdDNJ\u002fYP9+lfBNch9U\u002flcDRwlr97z\u002fkbiu3cMazvyp23FOwu8M\u002fGA0dSl4x7z\u002fBtbVmG5HzP9j1nosQhaW\u002fwZlBw4RB5z8GkV40NZLuPxYAiTbic9a\u002f6CS51hdT1D87rGCsnBTRv8khQ0DzxOG\u002fCcyPnvG627\u002fg675o\u002f7SaP3s+W0Lb8u8\u002fVkCiqueT6D9Ll9UJrzbpP4CCB+S\u002fOYe\u002fhEu3283r2D8gYYfKkPCWP+DYGxewope\u002fTqYNRce7379ydeiyHgLrP1\u002fRrt0lV+w\u002fOIQIt+0nuL8SLYJ3E9zkP3\u002fAqEgGzeG\u002fpN46dWl\u002f7j9h+At7UaTlv4cUU04EEOo\u002ffNItve\u002fp0L\u002fnI0h9MD7mP9CCeY\u002fWX+e\u002fEEGdhTnzqr+X7hLfs6Hrv0nQXZmoGOS\u002fQra0o+DZ8D\u002f+xi6cErzrvzBhYcbDuaq\u002fQJFRKI1OzL+wSVEXEwnWP79vlwKEB+C\u002fPxtdV3c+7j\u002fQRItwpzvSP3C8E0cqHsC\u002f0uNcCf7p4j9sy2eaAevWv6AdDlhCQ8+\u002f+CssLFKm8z9h0QxVk\u002f\u002ftv9WmZAuAX+8\u002fPHwXIgkizb\u002fOY6phiurvP1Cjav+h6qw\u002fesfRdFME0L\u002fAFYONaYSMv1zwj2EDasa\u002fTYr\u002fo8XD6D+8Ypbn1MXQvzjLkZ\u002fQxdC\u002fgHwsKxImhr9OGP1tGbXbP4kpiUFmHes\u002fhKT+UysH3r9UaM1t7NTmP7qEiAvpI9K\u002fSCs34Bqvwr8o27pMG0zWv0B1wU+XpNq\u002fpJiEEre85j8YvtlwBs7Uv0gFlk514Lk\u002fWK5\u002fk2mm5L\u002fGH59SZ7Pnv+ha5IIu5eY\u002fNF9woDaz6L9sf5s\u002fkMTNP5Rm1RaAO\u002fY\u002f2cFSffOB5j87qUyr5DT5P5p7tZibGe0\u002fKSTHtRCH6z8s2Et7ShD6P8BT5YUzFMo\u002f2mbyCMF74b\u002f8EtddFwjMP40UfGv66+M\u002fTRKIizSd5L9enIZlbxnTv2PBB2oVcvw\u002foB54Okrr9j80XwoR00DFP5bRypfRDfw\u002fwCDSkcHy8j+fJecQK+3mv2jQWuKvhvw\u002fMJn6Ue6pz7+o13HfwWDSP4LMwbyx6\u002f8\u002fub48\u002f5Ej7D\u002f2ZARiYSMAQFUYIWAjjOc\u002f3WYvV4YU\u002fD\u002f+ZbOZbPruP+JEAGQgy+K\u002f2l\u002fQQWV1yL8MhzYL\u002fEXXP6p4WZ10kwBArPt4R4uV4D+WW70\u002f7EXfP3zd6kiv4wBAsIl4Nvkn0D\u002fhEXd4TY8BQL+gA3MZ9fY\u002fuWlWcvVM0z+aqJ4IiSvNv5C+Vd5ZF9o\u002fTkiMpgEG+D+Yw6HQY5C0v\u002fKQzOpFm84\u002fno\u002fO97il9j\u002fbQWVjztz6PxgAHepmVQJAUDYXfxlA5D+6ixyKIjD1PyGda0nmwvQ\u002fuLmkyK3s6T8S5ApJxH8BQGGdq4TCd+s\u002fG9FViVVCB0DYvNaY68P8Pz0ZyjTBic8\u002fKGChHryqB0COLZCS0BzrP5F\u002fwpnZ3Mw\u002fJUTWCIRx8T+LBVsjIFvyPzbqrWKD+\u002fY\u002fJO1kM\u002fR6B0DOAI0dFd4BQNyYpbW0778\u002fpkT8gm7U2j\u002fNhE2Fe\u002fvRP547JfdrkgVAFWuk6T2Mzj9O9qRb6xoEQE\u002f+QSuFAeQ\u002fVPJ\u002f41zI8T\u002ftog0GWzcFQEITpYIyg+0\u002fRfsKkSBKC0AwwrbQFJECQFQORHLOntM\u002f9NgRnPkXBEBWKoAl3nL4P50bu2hjSQBA4slREf7\u002f2T94tecRA3X+P617Rwk+ZAVAvebBmGdC8z9+pF9ZloT1P3ZcLuAv6gdAaGxb1SPaAECi+pWHmx8JQAwSUqs2owZA\u002fNcnL7HQA0BlDGbTfo4BQCJHIsRTQ+M\u002fLctGRvDMAUCO9FbM1J7rPxnf7TvzQgZAploBwrL\u002f+z8wTTRxOzkEQCmil07U3QlAHBLD1xNIDEBvO+nNcccDQJ51HtaXwe0\u002fSi22TOVh7j+\u002fD02VgF0MQEKR9uddcvA\u002fgFhyHdVcCkAmc7j61jn3PyuQSJ8hEu8\u002fhJFvTo0f9T+yy6Ekj\u002fgIQDkPSjPiOfQ\u002fB5ruIfE4CkBG1Lt8hXgFQFjfPLMflg1AkRNg+5r49T+cPlxUdzEFQJ6vlo4YShBABDnTSvr+AEBC392b4OgMQESBg\u002foomRBADZmDSkF6B0Ak8KLIeYwHQHhszLKo6wtA1tgR4DroEUDSeD\u002fGkK8LQO1pdx1oogNA5xST04AeEkB5QDtctUISQEHvjA14B\u002fU\u002f3pfxnE0W\u002fD+u\u002fhRou2AQQKRiMfVwJApAdf6+gyLIEkCXkBgDi2kIQDAUk9TsHBJAprnnd7R4+T+Gp16HW7r4P1fTf4OikhNAYhIAWdu5+j9iv9SXjHYAQBsuWpxF4w1ABFuWFObjA0CW+HpFA8gSQKJDdyyW2gxAkqbhQmXe\u002fz8c8rPP2AvzP4qfQYgQnwZAaqazHDIbD0BpxlXld94TQJKugRilaAdA+U2QxC9hDECKBZj8xbEKQLLrDao2NgtACsBD\u002fpxMC0BQ3KUpQ9P7P4ogVqgZ3fw\u002f5Cvp6WtcAED4tg4NDz8IQLX7GOkkbxNAXBPdaKzZDEACgv21n+wKQL6\u002funZWF\u002fQ\u002f1uceMAy1E0CTp4yfX1cRQIFdpQbiRAJAhfVKPJ5oAUCUuaQXAkX\u002fP0ueOTcE6BNAtlFx3KXlCkCh55Ut8PENQIXwfR\u002fhNBJA6GrOZNuv\u002fT865o1jghgUQECqWybspfY\u002f5iWb2vCHC0BSgRqGPDb\u002fPw0HKFcXUwtADyQAM\u002fg4AECkakDVPbMJQGplrgDZQRJASxhkIWv9\u002fj+KLQPZ4Q4SQEbfbn6bigJAFXyh5\u002f08BUDNxR\u002fWQ3jyP0NFuwmsy\u002fI\u002fYjaLHXdQEUCWipzuIEjwPzG+q5s\u002fqgBAbkCEhUqIEkBj2ZwOscYEQF1fHKRlCRNAZhDHjMFM5D\u002fWuubSMAbyP+Rs1VuI3ABAPon62MWWAEBfVzeTMpMDQFQiXYe9VhNA5nQ1ztbgB0AmNI6hGMsQQNXzANWbYgRAfvJBgy3p\u002fT\u002f8ewYtk5j\u002fPy\u002fy4x0PPAdA8or1D8ozEEDCNPPobu\u002f7P+pKmOAT0RBAWItT\u002fjOwAEAEE3dgF\u002fQHQJAOvHdBReY\u002fnp95FoBLAkAF4W10ENEQQBa+ZrWXb+g\u002fyIFn8SfeEUA\u002fwwt\u002fcYARQNCoFXYJXhFA4GXFklqyAUCivk+8G7v9Px+E05I8PxBAPhRTMtB7B0CvYzmILw4BQCsk8uhK\u002fQBAtJawwd52rj\u002ftNps\u002feegPQN\u002fT5IQvlgdAIrizUdGE8z\u002fxCwcCfzoRQBB43guV7JQ\u002f"},"y":{"dtype":"f8","bdata":"SnvWtAOZ0j+NtGFIyFTRP0trW2qdOtM\u002fjpl\u002f\u002fr1e1D+7ngM9XrrZP4JrsLihfNw\u002frq+bR6Sw1z\u002fG7BpWTFbYPzR\u002fPU1jqNc\u002fbI481MXq3D8216H081ThP+5Wyrzs7No\u002fBG\u002f8mOdw4j\u002fK9NJfeabiPzhvdT3B9OQ\u002fMCrH\u002fANd5j8zaKb2AQrjP+EPqqQqKeI\u002fyAftA5Ce4z\u002fU\u002fYhEjnXkP262u0pdReo\u002fbm5BInQK5T+xudM78LrqPwQJfYDdZ+s\u002foNNddSTO7j+GIVLBt\u002fbsP40TF\u002fFQz+g\u002fH97uSh1E6z+ELclZaWXvP5BNaQc1se0\u002fv3DCB9HZ8D\u002fQ+aTYS0XsP9wpzAKGEOo\u002fsa3oTEvR8T99rw2e23brP1aqBLl3Sew\u002fq7KOrTN\u002f7j\u002f\u002fsdLSjpvvP7qE5FFGcvI\u002f6RH49E\u002fs7D9Ai\u002fd8SgHuP5ZzakkwtOw\u002f6Uru73pO7D+CpjGReT7tP\u002fSBZVNO2+0\u002fA5WMXB8j8j+z2\u002fBmObHwP7RVdDd1tfU\u002fgCF+x30W8T\u002fUxwBUM7X0PzYiczeRUPI\u002f7viBDdZL+D86zBz2IAT5P7B5RJAbOfU\u002fogslCVhX9j9s4qH69fD4PzqD87Ovlvg\u002fd\u002fQvjB8i8D8E+CQsE0rwP+Zor8e5ou8\u002fbqIW8sTh+D8t61fPOv\u002f1P\u002fK6ojRJTfI\u002fqmY6DYP48T\u002f8xvc2RkjxP+QM1bW56Pc\u002fGj27Jui1+z+uQzd51JH7P+4pm5JVlPg\u002fpBQE5BOc9D9aorJ5HMT6P+glrk8T1fk\u002fAaTfLEVM8j9aPQrCfVD2P6ox2moCAfg\u002fis0PVUaG8D8G9TDzbDv7P5Dq3ER\u002fq\u002fc\u002fjLh44NCC8D845gZjeof4P2eUDaHdCPA\u002f5r62YKbf8T8hVVPErCPzP1l0wmlF8fY\u002f4vffKHe2\u002fT+GMu\u002fwpO\u002f7P4iw\u002f7hQbfw\u002fn7I05USF8D\u002fSpL\u002fVhOz6P4YOxgPwKPA\u002f57yw+wgz9z9i9vApKYj+P\u002f4SCP7CWfo\u002fdqguvvwm+D9ldwiP+VTtP1jW9kM2y\u002fg\u002fE21kzi689D+TQohlFI7yP5L+dP7vs+o\u002f+mOKMupx9T9NXQ0YOBnsP98wTvQF\u002fOk\u002fbUZruR\u002f9\u002fT+4C7Kpoj3zP8Ub4iO7DvQ\u002fICjjKRC96D9u5DQJM\u002fr9P1CMOhA09vA\u002f\u002fS0ZYoB\u002f9D\u002f3gJdu5Hz9PwzXz\u002f42jfY\u002fuD\u002f1\u002fOLw6z8pDEHk5lHmP2FNteeH0+k\u002fEhRB6lzj7j\u002fKK0hC9jPxP1wnjobaFOo\u002fLoqrf4gn+z9y0lrlh0r8P2grL6bOluw\u002f3EzvMCr68z88PPviZpjkP0eZhD45FOI\u002fR7bdZcSa6D9EeD7BCq\u002f1P44cfmqnMuo\u002fn3qDdbPW8j8Whpg05WD5P+ZI0Lnld9k\u002frvFD0uwa7z8CJi6QbaH6PyIRX9\u002fdR+U\u002fZ\u002fvMse2K7z+8zmfo1P7xP1I2N3Cj0vg\u002fUDR2u5kL3j8MCqoUlzP4P9q4khZKrvA\u002fUVl34Dmo0z\u002f3QMnjV5f0Py2Fs1YHQOo\u002fdvy6vpa38j+jV1AoGm7xPwEpDGvhj\u002fE\u002fDrIHIluyzz+\u002fPEkoDk33P0hL3JwNfus\u002fhSFBMpG34T\u002f1YRE5mD7uP7C+uxY5Juo\u002fiQXOZXim2j+Nv4Oml3\u002fUPz+lQ5tarOI\u002fMMgScjIMwD+Jn1n4LRXSP9h91QeQoKc\u002fsB+d5h2p6D8EoYT3Ob\u002fpPzgGhLV2XaA\u002fJHVaqCzr4j\u002fsulxaoAvjP\u002fbmHWgN6PQ\u002fqK\u002fX9ZDczT8ccxWCM2DFP6BnNcSVAvY\u002fOUmXQzSf2D\u002ffpXwTXIfVP5XA0cJa\u002fe8\u002f5G4rt3DGs78qdtxTsLvDPxgNHUpeMe8\u002fwbW1ZhuR8z\u002fY9Z6LEIWlv8GZQcOEQec\u002fBpFeNDWS7j8WAIk24nPWv+gkudYXU9Q\u002fO6xgrJwU0b\u002fJIUNA88ThvwnMj57xutu\u002f4Ou+aP+0mj97PltC2\u002fLvP1ZAoqrnk+g\u002fS5fVCa826T+AggfkvzmHv4RLt9vN69g\u002fIGGHypDwlj\u002fg2BsXsKKXv06mDUXHu9+\u002fcnXosh4C6z9f0a7dJVfsPziECLftJ7i\u002fEi2CdxPc5D9\u002fwKhIBs3hv6TeOnVpf+4\u002fYfgLe1Gk5b+HFFNOBBDqP3zSLb3v6dC\u002f5yNIfTA+5j\u002fQgnmP1l\u002fnvxBBnYU586q\u002fl+4S37Oh679J0F2ZqBjkv0K2tKPg2fA\u002f\u002fsYunBK8678wYWHGw7mqv0CRUSiNTsy\u002fsElRFxMJ1j+\u002fb5cChAfgvz8bXVd3Pu4\u002f0ESLcKc70j9wvBNHKh7Av9LjXAn+6eI\u002fbMtnmgHr1r+gHQ5YQkPPv\u002fgrLCxSpvM\u002fYdEMVZP\u002f7b\u002fVpmQLgF\u002fvPzx8FyIJIs2\u002fzmOqYYrq7z9Qo2r\u002foeqsP3rH0XRTBNC\u002fwBWDjWmEjL9c8I9hA2rGv02K\u002f6PFw+g\u002fvGKW59TF0L84y5Gf0MXQv4B8LCsSJoa\u002fThj9bRm12z+JKYlBZh3rP4Sk\u002flMrB96\u002fVGjNbezU5j+6hIgL6SPSv0grN+Aar8K\u002fKNu6TBtM1r9AdcFPl6Tav6SYhBK3vOY\u002fGL7ZcAbO1L9IBZZOdeC5P1iuf5NppuS\u002fxh+fUmez57\u002foWuSCLuXmPzRfcKA2s+i\u002fbH+bP5DEzT+UZtUWgDv2P9nBUn3zgeY\u002fO6lMq+Q0+T+ae7WYmxntPykkx7UQh+s\u002fLNhLe0oQ+j\u002fAU+WFMxTKP9pm8gjBe+G\u002f\u002fBLXXRcIzD+NFHxr+uvjP00SiIs0neS\u002fXpyGZW8Z079jwQdqFXL8P6AeeDpK6\u002fY\u002fNF8KEdNAxT+W0cqX0Q38P8Ag0pHB8vI\u002fnyXnECvt5r9o0Frir4b8PzCZ+lHuqc+\u002fqNdx38Fg0j+CzMG8sev\u002fP7m+PP+RI+w\u002f9mQEYmEjAEBVGCFgI4znP91mL1eGFPw\u002f\u002fmWzmWz67j\u002fiRABkIMviv9pf0EFldci\u002fDIc2C\u002fxF1z+qeFmddJMAQKz7eEeLleA\u002fllu9P+xF3z983epIr+MAQLCJeDb5J9A\u002f4RF3eE2PAUC\u002foANzGfX2P7lpVnL1TNM\u002fmqieCIkrzb+QvlXeWRfaP05IjKYBBvg\u002fmMOh0GOQtL\u002fykMzqRZvOP56Pzve4pfY\u002f20FlY87c+j8YAB3qZlUCQFA2F38ZQOQ\u002fuosciiIw9T8hnWtJ5sL0P7i5pMit7Ok\u002fEuQKScR\u002fAUBhnauEwnfrPxvRVYlVQgdA2LzWmOvD\u002fD89Gco0wYnPPyhgoR68qgdAji2QktAc6z+Rf8KZ2dzMPyVE1giEcfE\u002fiwVbIyBb8j826q1ig\u002fv2PyTtZDP0egdAzgCNHRXeAUDcmKW1tO+\u002fP6ZE\u002fIJu1No\u002fzYRNhXv70T+eOyX3a5IFQBVrpOk9jM4\u002fTvakW+saBEBP\u002fkErhQHkP1Tyf+NcyPE\u002f7aINBls3BUBCE6WCMoPtP0X7CpEgSgtAMMK20BSRAkBUDkRyzp7TP\u002fTYEZz5FwRAViqAJd5y+D+dG7toY0kAQOLJURH+\u002f9k\u002feLXnEQN1\u002fj+te0cJPmQFQL3mwZhnQvM\u002ffqRfWZaE9T92XC7gL+oHQGhsW9Uj2gBAovqVh5sfCUAMElKrNqMGQPzXJy+x0ANAZQxm036OAUAiRyLEU0PjPy3LRkbwzAFAjvRWzNSe6z8Z3+0780IGQKZaAcKy\u002f\u002fs\u002fME00cTs5BEApopdO1N0JQBwSw9cTSAxAbzvpzXHHA0CedR7Wl8HtP0ottkzlYe4\u002fvw9NlYBdDEBCkfbnXXLwP4BYch3VXApAJnO4+tY59z8rkEifIRLvP4SRb06NH\u002fU\u002fssuhJI\u002f4CEA5D0oz4jn0Pwea7iHxOApARtS7fIV4BUBY3zyzH5YNQJETYPua+PU\u002fnD5cVHcxBUCer5aOGEoQQAQ500r6\u002fgBAQt\u002fdm+DoDEBEgYP6KJkQQA2Zg0pBegdAJPCiyHmMB0B4bMyyqOsLQNbYEeA66BFA0ng\u002fxpCvC0DtaXcdaKIDQOcUk9OAHhJAeUA7XLVCEkBB74wNeAf1P96X8ZxNFvw\u002frv4UaLtgEECkYjH1cCQKQHX+voMiyBJAl5AYA4tpCEAwFJPU7BwSQKa553e0ePk\u002fhqdeh1u6+D9X03+DopITQGISAFnbufo\u002fYr\u002fUl4x2AEAbLlqcReMNQARblhTm4wNAlvh6RQPIEkCiQ3csltoMQJKm4UJl3v8\u002fHPKzz9gL8z+Kn0GIEJ8GQGqmsxwyGw9AacZV5XfeE0CSroEYpWgHQPlNkMQvYQxAigWY\u002fMWxCkCy6w2qNjYLQArAQ\u002f6cTAtAUNylKUPT+z+KIFaoGd38P+Qr6elrXABA+LYODQ8\u002fCEC1+xjpJG8TQFwT3Wis2QxAAoL9tZ\u002fsCkC+v7p2Vhf0P9bnHjAMtRNAk6eMn19XEUCBXaUG4kQCQIX1SjyeaAFAlLmkFwJF\u002fz9Lnjk3BOgTQLZRcdyl5QpAoeeVLfDxDUCF8H0f4TQSQOhqzmTbr\u002f0\u002fOuaNY4IYFEBAqlsm7KX2P+Ylm9rwhwtAUoEahjw2\u002fz8NByhXF1MLQA8kADP4OABApGpA1T2zCUBqZa4A2UESQEsYZCFr\u002ff4\u002fii0D2eEOEkBG325+m4oCQBV8oef9PAVAzcUf1kN48j9DRbsJrMvyP2I2ix13UBFAloqc7iBI8D8xvqubP6oAQG5AhIVKiBJAY9mcDrHGBEBdXxykZQkTQGYQx4zBTOQ\u002f1rrm0jAG8j\u002fkbNVbiNwAQD6J+tjFlgBAX1c3kzKTA0BUIl2HvVYTQOZ0Nc7W4AdAJjSOoRjLEEDV8wDVm2IEQH7yQYMt6f0\u002f\u002fHsGLZOY\u002fz8v8uMdDzwHQPKK9Q\u002fKMxBAwjTz6G7v+z\u002fqSpjgE9EQQFiLU\u002f4zsABABBN3YBf0B0CQDrx3QUXmP56feRaASwJABeFtdBDREEAWvma1l2\u002foP8iBZ\u002fEn3hFAP8MLf3GAEUDQqBV2CV4RQOBlxZJasgFAor5PvBu7\u002fT8fhNOSPD8QQD4UUzLQewdAr2M5iC8OAUArJPLoSv0AQLSWsMHedq4\u002f7TabP3noD0Df0+SEL5YHQCK4s1HRhPM\u002f8QsHAn86EUAQeN4LleyUP1OCSA8UvhFAv0wCa6lBEUAJc42ZTKf3PyTZPgtWq8w\u002fkzc98JMK+z9aVsqPwkv+PxBn6JYLkfc\u002fsgQ6oCVd0b8UM0g6\u002fdq2v2CArVWzlgxA"},"z":{"dtype":"f8","bdata":"Nteh9PNU4T\u002fuVsq87OzaPwRv\u002fJjncOI\u002fyvTSX3mm4j84b3U9wfTkPzAqx\u002fwDXeY\u002fM2im9gEK4z\u002fhD6qkKiniP8gH7QOQnuM\u002f1P2IRI515D9utrtKXUXqP25uQSJ0CuU\u002fsbnTO\u002fC66j8ECX2A3WfrP6DTXXUkzu4\u002fhiFSwbf27D+NExfxUM\u002foPx\u002fe7kodROs\u002fhC3JWWll7z+QTWkHNbHtP79wwgfR2fA\u002f0Pmk2EtF7D\u002fcKcwChhDqP7Gt6ExL0fE\u002ffa8Nntt26z9WqgS5d0nsP6uyjq0zf+4\u002f\u002f7HS0o6b7z+6hORRRnLyP+kR+PRP7Ow\u002fQIv3fEoB7j+Wc2pJMLTsP+lK7u96Tuw\u002fgqYxkXk+7T\u002f0gWVTTtvtPwOVjFwfI\u002fI\u002fs9vwZjmx8D+0VXQ3dbX1P4Ahfsd9FvE\u002f1McAVDO19D82InM3kVDyP+74gQ3WS\u002fg\u002fOswc9iAE+T+weUSQGzn1P6ILJQlYV\u002fY\u002fbOKh+vXw+D86g\u002fOzr5b4P3f0L4wfIvA\u002fBPgkLBNK8D\u002fmaK\u002fHuaLvP26iFvLE4fg\u002fLetXzzr\u002f9T\u002fyuqI0SU3yP6pmOg2D+PE\u002f\u002fMb3NkZI8T\u002fkDNW1uej3Pxo9uybotfs\u002frkM3edSR+z\u002fuKZuSVZT4P6QUBOQTnPQ\u002fWqKyeRzE+j\u002foJa5PE9X5PwGk3yxFTPI\u002fWj0Kwn1Q9j+qMdpqAgH4P4rND1VGhvA\u002fBvUw82w7+z+Q6txEf6v3P4y4eODQgvA\u002fOOYGY3qH+D9nlA2h3QjwP+a+tmCm3\u002fE\u002fIVVTxKwj8z9ZdMJpRfH2P+L33yh3tv0\u002fhjLv8KTv+z+IsP+4UG38P5+yNOVEhfA\u002f0qS\u002f1YTs+j+GDsYD8CjwP+e8sPsIM\u002fc\u002fYvbwKSmI\u002fj\u002f+Egj+wln6P3aoLr78Jvg\u002fZXcIj\u002flU7T9Y1vZDNsv4PxNtZM4uvPQ\u002fk0KIZRSO8j+S\u002fnT+77PqP\u002fpjijLqcfU\u002fTV0NGDgZ7D\u002ffME70BfzpP21Ga7kf\u002ff0\u002fuAuyqaI98z\u002fFG+Ijuw70PyAo4ykQveg\u002fbuQ0CTP6\u002fT9QjDoQNPbwP\u002f0tGWKAf\u002fQ\u002f94CXbuR8\u002fT8M18\u002f+No32P7g\u002f9fzi8Os\u002fKQxB5OZR5j9hTbXnh9PpPxIUQepc4+4\u002fyitIQvYz8T9cJ46G2hTqPy6Kq3+IJ\u002fs\u002fctJa5YdK\u002fD9oKy+mzpbsP9xM7zAq+vM\u002fPDz74maY5D9HmYQ+ORTiP0e23WXEmug\u002fRHg+wQqv9T+OHH5qpzLqP596g3Wz1vI\u002fFoaYNOVg+T\u002fmSNC55XfZP67xQ9LsGu8\u002fAiYukG2h+j8iEV\u002ff3UflP2f7zLHtiu8\u002fvM5n6NT+8T9SNjdwo9L4P1A0druZC94\u002fDAqqFJcz+D\u002fauJIWSq7wP1FZd+A5qNM\u002f90DJ41eX9D8thbNWB0DqP3b8ur6Wt\u002fI\u002fo1dQKBpu8T8BKQxr4Y\u002fxPw6yByJbss8\u002fvzxJKA5N9z9IS9ycDX7rP4UhQTKRt+E\u002f9WEROZg+7j+wvrsWOSbqP4kFzmV4pto\u002fjb+Dppd\u002f1D8\u002fpUObWqziPzDIEnIyDMA\u002fiZ9Z+C0V0j\u002fYfdUHkKCnP7AfneYdqeg\u002fBKGE9zm\u002f6T84BoS1dl2gPyR1Wqgs6+I\u002f7LpcWqAL4z\u002f25h1oDej0P6iv1\u002fWQ3M0\u002fHHMVgjNgxT+gZzXElQL2PzlJl0M0n9g\u002f36V8E1yH1T+VwNHCWv3vP+RuK7dwxrO\u002fKnbcU7C7wz8YDR1KXjHvP8G1tWYbkfM\u002f2PWeixCFpb\u002fBmUHDhEHnPwaRXjQ1ku4\u002fFgCJNuJz1r\u002foJLnWF1PUPzusYKycFNG\u002fySFDQPPE4b8JzI+e8brbv+Drvmj\u002ftJo\u002fez5bQtvy7z9WQKKq55PoP0uX1QmvNuk\u002fgIIH5L85h7+ES7fbzevYPyBhh8qQ8JY\u002f4NgbF7Cil79Opg1Fx7vfv3J16LIeAus\u002fX9Gu3SVX7D84hAi37Se4vxItgncT3OQ\u002ff8CoSAbN4b+k3jp1aX\u002fuP2H4C3tRpOW\u002fhxRTTgQQ6j980i297+nQv+cjSH0wPuY\u002f0IJ5j9Zf578QQZ2FOfOqv5fuEt+zoeu\u002fSdBdmagY5L9CtrSj4NnwP\u002f7GLpwSvOu\u002fMGFhxsO5qr9AkVEojU7Mv7BJURcTCdY\u002fv2+XAoQH4L8\u002fG11Xdz7uP9BEi3CnO9I\u002fcLwTRyoewL\u002fS41wJ\u002funiP2zLZ5oB69a\u002foB0OWEJDz7\u002f4KywsUqbzP2HRDFWT\u002f+2\u002f1aZkC4Bf7z88fBciCSLNv85jqmGK6u8\u002fUKNq\u002f6HqrD96x9F0UwTQv8AVg41phIy\u002fXPCPYQNqxr9Niv+jxcPoP7xilufUxdC\u002fOMuRn9DF0L+AfCwrEiaGv04Y\u002fW0Ztds\u002fiSmJQWYd6z+EpP5TKwfev1RozW3s1OY\u002fuoSIC+kj0r9IKzfgGq\u002fCvyjbukwbTNa\u002fQHXBT5ek2r+kmIQSt7zmPxi+2XAGztS\u002fSAWWTnXguT9Yrn+Taabkv8Yfn1Jns+e\u002f6Frkgi7l5j80X3CgNrPov2x\u002fmz+QxM0\u002flGbVFoA79j\u002fZwVJ984HmPzupTKvkNPk\u002fmnu1mJsZ7T8pJMe1EIfrPyzYS3tKEPo\u002fwFPlhTMUyj\u002faZvIIwXvhv\u002fwS110XCMw\u002fjRR8a\u002frr4z9NEoiLNJ3kv16chmVvGdO\u002fY8EHahVy\u002fD+gHng6Suv2PzRfChHTQMU\u002fltHKl9EN\u002fD\u002fAINKRwfLyP58l5xAr7ea\u002faNBa4q+G\u002fD8wmfpR7qnPv6jXcd\u002fBYNI\u002fgszBvLHr\u002fz+5vjz\u002fkSPsP\u002fZkBGJhIwBAVRghYCOM5z\u002fdZi9XhhT8P\u002f5ls5ls+u4\u002f4kQAZCDL4r\u002faX9BBZXXIvwyHNgv8Rdc\u002fqnhZnXSTAECs+3hHi5XgP5ZbvT\u002fsRd8\u002ffN3qSK\u002fjAECwiXg2+SfQP+ERd3hNjwFAv6ADcxn19j+5aVZy9UzTP5qongiJK82\u002fkL5V3lkX2j9OSIymAQb4P5jDodBjkLS\u002f8pDM6kWbzj+ej873uKX2P9tBZWPO3Po\u002fGAAd6mZVAkBQNhd\u002fGUDkP7qLHIoiMPU\u002fIZ1rSebC9D+4uaTIrezpPxLkCknEfwFAYZ2rhMJ36z8b0VWJVUIHQNi81pjrw\u002fw\u002fPRnKNMGJzz8oYKEevKoHQI4tkJLQHOs\u002fkX\u002fCmdnczD8lRNYIhHHxP4sFWyMgW\u002fI\u002fNuqtYoP79j8k7WQz9HoHQM4AjR0V3gFA3JiltbTvvz+mRPyCbtTaP82ETYV7+9E\u002fnjsl92uSBUAVa6TpPYzOP072pFvrGgRAT\u002f5BK4UB5D9U8n\u002fjXMjxP+2iDQZbNwVAQhOlgjKD7T9F+wqRIEoLQDDCttAUkQJAVA5Ecs6e0z\u002f02BGc+RcEQFYqgCXecvg\u002fnRu7aGNJAEDiyVER\u002fv\u002fZP3i15xEDdf4\u002frXtHCT5kBUC95sGYZ0LzP36kX1mWhPU\u002fdlwu4C\u002fqB0BobFvVI9oAQKL6lYebHwlADBJSqzajBkD81ycvsdADQGUMZtN+jgFAIkcixFND4z8ty0ZG8MwBQI70VszUnus\u002fGd\u002ftO\u002fNCBkCmWgHCsv\u002f7PzBNNHE7OQRAKaKXTtTdCUAcEsPXE0gMQG876c1xxwNAnnUe1pfB7T9KLbZM5WHuP78PTZWAXQxAQpH2511y8D+AWHId1VwKQCZzuPrWOfc\u002fK5BInyES7z+EkW9OjR\u002f1P7LLoSSP+AhAOQ9KM+I59D8Hmu4h8TgKQEbUu3yFeAVAWN88sx+WDUCRE2D7mvj1P5w+XFR3MQVAnq+WjhhKEEAEOdNK+v4AQELf3Zvg6AxARIGD+iiZEEANmYNKQXoHQCTwosh5jAdAeGzMsqjrC0DW2BHgOugRQNJ4P8aQrwtA7Wl3HWiiA0DnFJPTgB4SQHlAO1y1QhJAQe+MDXgH9T\u002fel\u002fGcTRb8P67+FGi7YBBApGIx9XAkCkB1\u002fr6DIsgSQJeQGAOLaQhAMBST1OwcEkCmued3tHj5P4anXodbuvg\u002fV9N\u002fg6KSE0BiEgBZ27n6P2K\u002f1JeMdgBAGy5anEXjDUAEW5YU5uMDQJb4ekUDyBJAokN3LJbaDECSpuFCZd7\u002fPxzys8\u002fYC\u002fM\u002fip9BiBCfBkBqprMcMhsPQGnGVeV33hNAkq6BGKVoB0D5TZDEL2EMQIoFmPzFsQpAsusNqjY2C0AKwEP+nEwLQFDcpSlD0\u002fs\u002fiiBWqBnd\u002fD\u002fkK+npa1wAQPi2Dg0PPwhAtfsY6SRvE0BcE91orNkMQAKC\u002fbWf7ApAvr+6dlYX9D\u002fW5x4wDLUTQJOnjJ9fVxFAgV2lBuJEAkCF9Uo8nmgBQJS5pBcCRf8\u002fS545NwToE0C2UXHcpeUKQKHnlS3w8Q1AhfB9H+E0EkDoas5k26\u002f9PzrmjWOCGBRAQKpbJuyl9j\u002fmJZva8IcLQFKBGoY8Nv8\u002fDQcoVxdTC0APJAAz+DgAQKRqQNU9swlAamWuANlBEkBLGGQha\u002f3+P4otA9nhDhJARt9ufpuKAkAVfKHn\u002fTwFQM3FH9ZDePI\u002fQ0W7CazL8j9iNosdd1ARQJaKnO4gSPA\u002fMb6rmz+qAEBuQISFSogSQGPZnA6xxgRAXV8cpGUJE0BmEMeMwUzkP9a65tIwBvI\u002f5GzVW4jcAEA+ifrYxZYAQF9XN5MykwNAVCJdh71WE0DmdDXO1uAHQCY0jqEYyxBA1fMA1ZtiBEB+8kGDLen9P\u002fx7Bi2TmP8\u002fL\u002fLjHQ88B0DyivUPyjMQQMI08+hu7\u002fs\u002f6kqY4BPREEBYi1P+M7AAQAQTd2AX9AdAkA68d0FF5j+en3kWgEsCQAXhbXQQ0RBAFr5mtZdv6D\u002fIgWfxJ94RQD\u002fDC39xgBFA0KgVdgleEUDgZcWSWrIBQKK+T7wbu\u002f0\u002fH4TTkjw\u002fEEA+FFMy0HsHQK9jOYgvDgFAKyTy6Er9AEC0lrDB3nauP+02mz956A9A39PkhC+WB0AiuLNR0YTzP\u002fELBwJ\u002fOhFAEHjeC5XslD9TgkgPFL4RQL9MAmupQRFACXONmUyn9z8k2T4LVqvMP5M3PfCTCvs\u002fWlbKj8JL\u002fj8QZ+iWC5H3P7IEOqAlXdG\u002fFDNIOv3atr9ggK1Vs5YMQOZJPyUIVglAAp5kzBd75D+yzvTFyJ0CQM\u002f66OXv0wVA2NhtMDKzx7\u002fm8KUL8uH+P0ogF\u002fa7bwxA0t0sN2IP1T\u002fQOaJiSI3kP8De\u002f52NoAFA"},"type":"scatter3d"}],                        {"template":{"data":{"histogram2dcontour":[{"type":"histogram2dcontour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"choropleth":[{"type":"choropleth","colorbar":{"outlinewidth":0,"ticks":""}}],"histogram2d":[{"type":"histogram2d","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"heatmap":[{"type":"heatmap","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"contourcarpet":[{"type":"contourcarpet","colorbar":{"outlinewidth":0,"ticks":""}}],"contour":[{"type":"contour","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"surface":[{"type":"surface","colorbar":{"outlinewidth":0,"ticks":""},"colorscale":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]]}],"mesh3d":[{"type":"mesh3d","colorbar":{"outlinewidth":0,"ticks":""}}],"scatter":[{"fillpattern":{"fillmode":"overlay","size":10,"solidity":0.2},"type":"scatter"}],"parcoords":[{"type":"parcoords","line":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolargl":[{"type":"scatterpolargl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"bar":[{"error_x":{"color":"#2a3f5f"},"error_y":{"color":"#2a3f5f"},"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"bar"}],"scattergeo":[{"type":"scattergeo","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterpolar":[{"type":"scatterpolar","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"histogram":[{"marker":{"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"histogram"}],"scattergl":[{"type":"scattergl","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatter3d":[{"type":"scatter3d","line":{"colorbar":{"outlinewidth":0,"ticks":""}},"marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermap":[{"type":"scattermap","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattermapbox":[{"type":"scattermapbox","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scatterternary":[{"type":"scatterternary","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"scattercarpet":[{"type":"scattercarpet","marker":{"colorbar":{"outlinewidth":0,"ticks":""}}}],"carpet":[{"aaxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"baxis":{"endlinecolor":"#2a3f5f","gridcolor":"#C8D4E3","linecolor":"#C8D4E3","minorgridcolor":"#C8D4E3","startlinecolor":"#2a3f5f"},"type":"carpet"}],"table":[{"cells":{"fill":{"color":"#EBF0F8"},"line":{"color":"white"}},"header":{"fill":{"color":"#C8D4E3"},"line":{"color":"white"}},"type":"table"}],"barpolar":[{"marker":{"line":{"color":"white","width":0.5},"pattern":{"fillmode":"overlay","size":10,"solidity":0.2}},"type":"barpolar"}],"pie":[{"automargin":true,"type":"pie"}]},"layout":{"autotypenumbers":"strict","colorway":["#636efa","#EF553B","#00cc96","#ab63fa","#FFA15A","#19d3f3","#FF6692","#B6E880","#FF97FF","#FECB52"],"font":{"color":"#2a3f5f"},"hovermode":"closest","hoverlabel":{"align":"left"},"paper_bgcolor":"white","plot_bgcolor":"white","polar":{"bgcolor":"white","angularaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""},"radialaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":""}},"ternary":{"bgcolor":"white","aaxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"baxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""},"caxis":{"gridcolor":"#DFE8F3","linecolor":"#A2B1C6","ticks":""}},"coloraxis":{"colorbar":{"outlinewidth":0,"ticks":""}},"colorscale":{"sequential":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"sequentialminus":[[0.0,"#0d0887"],[0.1111111111111111,"#46039f"],[0.2222222222222222,"#7201a8"],[0.3333333333333333,"#9c179e"],[0.4444444444444444,"#bd3786"],[0.5555555555555556,"#d8576b"],[0.6666666666666666,"#ed7953"],[0.7777777777777778,"#fb9f3a"],[0.8888888888888888,"#fdca26"],[1.0,"#f0f921"]],"diverging":[[0,"#8e0152"],[0.1,"#c51b7d"],[0.2,"#de77ae"],[0.3,"#f1b6da"],[0.4,"#fde0ef"],[0.5,"#f7f7f7"],[0.6,"#e6f5d0"],[0.7,"#b8e186"],[0.8,"#7fbc41"],[0.9,"#4d9221"],[1,"#276419"]]},"xaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"yaxis":{"gridcolor":"#EBF0F8","linecolor":"#EBF0F8","ticks":"","title":{"standoff":15},"zerolinecolor":"#EBF0F8","automargin":true,"zerolinewidth":2},"scene":{"xaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"yaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2},"zaxis":{"backgroundcolor":"white","gridcolor":"#DFE8F3","linecolor":"#EBF0F8","showbackground":true,"ticks":"","zerolinecolor":"#EBF0F8","gridwidth":2}},"shapedefaults":{"line":{"color":"#2a3f5f"}},"annotationdefaults":{"arrowcolor":"#2a3f5f","arrowhead":0,"arrowwidth":1},"geo":{"bgcolor":"white","landcolor":"white","subunitcolor":"#C8D4E3","showland":true,"showlakes":true,"lakecolor":"white"},"title":{"x":0.05},"mapbox":{"style":"light"},"margin":{"b":0,"l":0,"r":0,"t":30}}},"margin":{"l":0,"r":0,"b":0,"t":60},"title":{"text":"Chmura punktów 3D - Narastająca degradacja (Kolor = Czas)"},"height":500},                        {"responsive": true}                    ).then(function(){
+                            
+var gd = document.getElementById('77aa1df4-673c-42ac-b583-949dd87a0dd9');
+var x = new MutationObserver(function (mutations, observer) {{
+        var display = window.getComputedStyle(gd).display;
+        if (!display || display === 'none') {{
+            console.log([gd, 'removed!']);
+            Plotly.purge(gd);
+            observer.disconnect();
+        }}
+}});
+
+// Listen for the removal of the full notebook cells
+var notebookContainer = gd.closest('#notebook-container');
+if (notebookContainer) {{
+    x.observe(notebookContainer, {childList: true});
+}}
+
+// Listen for the clearing of the current output cell
+var outputEl = gd.closest('.output');
+if (outputEl) {{
+    x.observe(outputEl, {childList: true});
+}}
+
+                        })                };            </script>        </div>
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-evolving-degradation-3d-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;7: Rozpad struktury geometrycznej (3D) w miarę narastania szumu
+</figcaption>
+</figure>
+</div>
+</div>
+<section id="monitoring-w-oknach-czasowych" class="level3">
+<h3 class="anchored" data-anchor-id="monitoring-w-oknach-czasowych">Monitoring w oknach czasowych</h3>
+<p>Obliczamy entropię dla kolejnych fragmentów sygnału, aby uchwycić moment przekroczenia limitu bezpieczeństwa.</p>
+<div id="cell-fig-evolving-degradation-entropy" class="cell" data-execution_count="10">
+<div class="code-copy-outer-scaffold"><div class="sourceCode cell-code" id="cb13"><pre class="sourceCode python code-with-copy"><code class="sourceCode python"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="co"># Obliczenie entropii w oknach</span></span>
+<span id="cb13-2"><a href="#cb13-2" aria-hidden="true" tabindex="-1"></a>windows_evolving <span class="op">=</span> mixed_signal_evolving.reshape(<span class="dv">5</span>, <span class="dv">100</span>)</span>
+<span id="cb13-3"><a href="#cb13-3" aria-hidden="true" tabindex="-1"></a>window_entropies_evolving <span class="op">=</span> pipeline.fit_transform(windows_evolving)</span>
+<span id="cb13-4"><a href="#cb13-4" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb13-5"><a href="#cb13-5" aria-hidden="true" tabindex="-1"></a>plt.figure()</span>
+<span id="cb13-6"><a href="#cb13-6" aria-hidden="true" tabindex="-1"></a>plt.plot(window_entropies_evolving.squeeze(), marker<span class="op">=</span><span class="st">'s'</span>, linestyle<span class="op">=</span><span class="st">'-'</span>, color<span class="op">=</span>COLOR_ANOMALY, label<span class="op">=</span><span class="st">"Entropia (Awaria)"</span>)</span>
+<span id="cb13-7"><a href="#cb13-7" aria-hidden="true" tabindex="-1"></a>plt.axhline(y<span class="op">=</span>THRESHOLD, color<span class="op">=</span><span class="st">'black'</span>, linestyle<span class="op">=</span><span class="st">':'</span>, label<span class="op">=</span><span class="st">"Limit bezpieczeństwa"</span>)</span>
+<span id="cb13-8"><a href="#cb13-8" aria-hidden="true" tabindex="-1"></a>plt.fill_between(np.arange(<span class="dv">5</span>), <span class="dv">4</span>, <span class="dv">10</span>, </span>
+<span id="cb13-9"><a href="#cb13-9" aria-hidden="true" tabindex="-1"></a>                 color<span class="op">=</span>COLOR_ANOMALY, alpha<span class="op">=</span><span class="fl">0.2</span>, label<span class="op">=</span><span class="st">"ALARM"</span>)</span>
+<span id="cb13-10"><a href="#cb13-10" aria-hidden="true" tabindex="-1"></a>plt.title(<span class="st">"System wczesnego ostrzegania (TDA Alarm)"</span>)</span>
+<span id="cb13-11"><a href="#cb13-11" aria-hidden="true" tabindex="-1"></a>plt.xlabel(<span class="st">"Numer okna"</span>)</span>
+<span id="cb13-12"><a href="#cb13-12" aria-hidden="true" tabindex="-1"></a>plt.ylabel(<span class="st">"Entropia"</span>)</span>
+<span id="cb13-13"><a href="#cb13-13" aria-hidden="true" tabindex="-1"></a>plt.legend()</span>
+<span id="cb13-14"><a href="#cb13-14" aria-hidden="true" tabindex="-1"></a>plt.ylim(<span class="dv">0</span>, <span class="dv">12</span>)</span>
+<span id="cb13-15"><a href="#cb13-15" aria-hidden="true" tabindex="-1"></a>plt.show()</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="cell-output cell-output-display">
+<div id="fig-evolving-degradation-entropy" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-fig figure">
+<div aria-describedby="fig-evolving-degradation-entropy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<img src="main_files/figure-html/fig-evolving-degradation-entropy-output-1.png" width="692" height="400" class="figure-img">
+</div>
+<figcaption class="quarto-float-caption-bottom quarto-float-caption quarto-float-fig" id="fig-evolving-degradation-entropy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Figure&nbsp;8: Wykrycie momentu awarii przez system TDA
+</figcaption>
+</figure>
+</div>
+</div>
+</div>
+</section>
+</section>
+<section id="podsumowanie-i-wnioski" class="level1">
+<h1>Podsumowanie i wnioski</h1>
+<p>Analiza TDA udowodniła, że jest potężnym narzędziem do wykrywania anomalii:</p>
+<ul>
+<li><p><strong>Przewidywalność</strong>: Dzięki entropii persystentnej możemy zamienić złożoną geometrię na pojedynczy wskaźnik alarmowy.</p></li>
+<li><p><strong>Wizualizacja</strong>: Chmury punktów w 3D pozwalają intuicyjnie zrozumieć, dlaczego sygnał traci swoją “jakość”.</p></li>
+<li><p><strong>Automatyzacja</strong>: Wyznaczenie progów decyzyjnych pozwala na budowę systemów monitorujących stan urządzeń w czasie rzeczywistym.</p></li>
+</ul>
+<section id="kolejne-kroki" class="level3">
+<h3 class="anchored" data-anchor-id="kolejne-kroki">Kolejne kroki</h3>
+<ul>
+<li><strong>Dostrojenie parametrów</strong>: Automatyzacja doboru <code>time_delay</code> za pomocą analizy autokorelacji.</li>
+<li><strong>Integracja z ML</strong>: Wykorzystanie wektorów persystencji (Persistence Landscapes/Images) jako cech w modelach klasyfikacyjnych.</li>
+</ul>
+</section>
+</section>
+
+</main>
+<!-- /main column -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp('/' + window.location.host + '/');
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

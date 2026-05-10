@@ -1,0 +1,44 @@
+#+TITLE: Analiza TDA: Wykrywanie anomalii w szeregach czasowych
+#+AUTHOR: M. Janiga
+
+* Opis projektu
+Projekt demonstruje zastosowanie Analizy Topologicznej Danych (TDA) do wykrywania anomalii w szeregach czasowych. Wykorzystuje technikę zanurzenia Takensa (Takens Embedding) oraz homologię persystentną do analizy struktury geometrycznej sygnałów.
+
+Jest dostępny pod linkiem: [[https://mikejaniga.github.io/tda-test/][Analiza TDA: Wykrywanie anomalii w szeregach czasowych]]
+
+Główne cele:
+- Odróżnienie sygnału uporządkowanego (np. sinusoida) od chaosu (szum).
+- Wykorzystanie entropii persystentnej jako wskaźnika anomalii.
+- Budowa systemu wczesnego ostrzegania przed awariami.
+
+* Struktura projektu
+- ~main.qmd~: Główny dokument Quarto zawierający analizę i kod.
+- ~_quarto.yml~: Konfiguracja projektu Quarto.
+- ~pyproject.toml~ / ~uv.lock~: Konfiguracja środowiska Python (uv).
+- ~docs/~: Wygenerowana dokumentacja HTML.
+
+* Wymagania
+- Python >= 3.11
+- [[https://quarto.org/][Quarto]]
+- [[https://github.com/astral-sh/uv][uv]] (rekomendowane do zarządzania pakietami)
+
+* Instalacja
+Aby przygotować środowisko, użyj narzędzia ~uv~:
+
+#+begin_src bash
+uv sync
+#+end_src
+
+* Uruchomienie
+Aby wygenerować raport w formacie HTML:
+
+#+begin_src bash
+quarto render main.qmd
+#+end_src
+
+Wynikowy plik znajdzie się w katalogu ~docs/index.html~.
+
+* Kluczowe biblioteki
+- ~giotto-tda~: Główna biblioteka do Analizy Topologicznej Danych.
+- ~numpy~, ~matplotlib~, ~plotly~, ~seaborn~: Analiza danych i wizualizacja.
+- ~scikit-learn~: Integracja z potokami (Pipeline).
